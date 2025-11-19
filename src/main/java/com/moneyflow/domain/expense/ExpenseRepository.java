@@ -39,4 +39,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
 
     // 특정 지출이 사용자의 것인지 확인
     boolean existsByExpenseIdAndUserUserId(UUID expenseId, UUID userId);
+
+    // 특정 날짜 이후의 지출 조회 (구독료 탐지용)
+    @Query("SELECT e FROM Expense e WHERE e.user.userId = :userId " +
+           "AND e.date >= :startDate " +
+           "ORDER BY e.date ASC")
+    List<Expense> findByUser_UserIdAndDateAfter(
+            @Param("userId") UUID userId,
+            @Param("startDate") LocalDate startDate);
 }

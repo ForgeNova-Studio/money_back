@@ -1,0 +1,129 @@
+package com.moneyflow.domain.recurringexpense;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * 고정비 및 구독료 Repository
+ */
+@Repository
+public interface RecurringExpenseRepository extends JpaRepository<RecurringExpense, UUID> {
+
+    /**
+     * 사용자의 모든 고정비 조회
+     */
+    List<RecurringExpense> findByUser_UserId(UUID userId);
+
+    /**
+     * 커플의 모든 고정비 조회
+     */
+    List<RecurringExpense> findByCoupleId(UUID coupleId);
+
+    /**
+     * 사용자의 모든 고정비 조회 (커플 고정비 포함)
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId OR r.coupleId = :coupleId")
+    List<RecurringExpense> findByUserIdOrCoupleId(@Param("userId") UUID userId, @Param("coupleId") UUID coupleId);
+
+    /**
+     * 구독료만 조회
+     */
+    List<RecurringExpense> findByUser_UserIdAndIsSubscription(UUID userId, Boolean isSubscription);
+
+    /**
+     * 특정 기간 내 결제 예정인 고정비 조회
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+            "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
+            "ORDER BY r.nextPaymentDate ASC")
+    List<RecurringExpense> findUpcomingPayments(
+            @Param("userId") UUID userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    /**
+     * 특정 기간 내 결제 예정인 고정비 조회 (커플 포함)
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+            "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
+            "ORDER BY r.nextPaymentDate ASC")
+    List<RecurringExpense> findUpcomingPaymentsWithCouple(
+            @Param("userId") UUID userId,
+            @Param("coupleId") UUID coupleId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    /**
+     * 특정 카테고리의 고정비 조회
+     */
+    List<RecurringExpense> findByUser_UserIdAndCategory(UUID userId, String category);
+
+    /**
+     * 종료되지 않은 고정비만 조회
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+    List<RecurringExpense> findActiveRecurringExpenses(@Param("userId") UUID userId);
+
+    /**
+     * 종료되지 않은 고정비만 조회 (커플 포함)
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+    List<RecurringExpense> findActiveRecurringExpensesWithCouple(
+            @Param("userId") UUID userId,
+            @Param("coupleId") UUID coupleId
+    );
+
+    /**
+     * 월간 고정비 총액 계산
+     */
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
+            "WHERE r.user.userId = :userId " +
+            "AND r.recurringType = 'MONTHLY' " +
+            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+    BigDecimal calculateMonthlyTotal(@Param("userId") UUID userId);
+
+    /**
+     * 월간 고정비 총액 계산 (커플 포함)
+     */
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
+            "WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+            "AND r.recurringType = 'MONTHLY' " +
+            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+    BigDecimal calculateMonthlyTotalWithCouple(
+            @Param("userId") UUID userId,
+            @Param("coupleId") UUID coupleId
+    );
+
+    /**
+     * 알림이 활성화된 고정비 조회
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+            "AND r.notificationEnabled = true " +
+            "AND r.nextPaymentDate = :date")
+    List<RecurringExpense> findNotificationEnabledByDate(
+            @Param("userId") UUID userId,
+            @Param("date") LocalDate date
+    );
+
+    /**
+     * 자동 탐지된 고정비 조회
+     */
+    List<RecurringExpense> findByUser_UserIdAndAutoDetected(UUID userId, Boolean autoDetected);
+
+    /**
+     * 특정 구독 제공자의 고정비 조회
+     */
+    Optional<RecurringExpense> findByUser_UserIdAndSubscriptionProvider(UUID userId, String subscriptionProvider);
+}
