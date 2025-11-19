@@ -2,10 +2,16 @@ package com.moneyflow.domain.user;
 
 import com.moneyflow.dto.request.LoginRequest;
 import com.moneyflow.dto.request.RegisterRequest;
+import com.moneyflow.dto.request.SocialLoginRequest;
 import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
 import com.moneyflow.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +42,65 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
 
         LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/social-login")
+    @Operation(
+            summary = "소셜 로그인",
+            description = "Google, Apple, Naver, Kakao 소셜 로그인을 처리합니다. " +
+                    "클라이언트에서 받은 ID Token 또는 Access Token을 검증하고 JWT 토큰을 발급합니다. " +
+                    "(Google/Apple: ID Token, Naver/Kakao: Access Token) " +
+                    "신규 사용자의 경우 자동으로 회원가입이 진행됩니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "소셜 로그인 성공 (기존 사용자)",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "소셜 로그인 성공 (신규 가입)",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "유효하지 않은 ID Token 또는 이미 다른 방법으로 가입된 이메일",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    value = "{\"error\": \"유효하지 않은 소셜 로그인 토큰입니다\"}"
+                            )
+                    )
+            )
+    })
+    public ResponseEntity<LoginResponse> socialLogin(
+            @Valid @RequestBody SocialLoginRequest request) {
+
+        LoginResponse response = authService.socialLogin(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/social-login/mock")
+    @Operation(
+            summary = "[개발용] Mock 소셜 로그인",
+            description = "⚠️ 개발/테스트 전용 엔드포인트입니다. " +
+                    "실제 ID Token/Access Token 없이 소셜 로그인을 테스트할 수 있습니다. " +
+                    "지원: GOOGLE, APPLE, NAVER, KAKAO. " +
+                    "idToken 필드에 임의의 문자열을 입력하면 됩니다. " +
+                    "프로덕션 환경에서는 비활성화되어야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Mock 소셜 로그인 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            )
+    })
+    public ResponseEntity<LoginResponse> mockSocialLogin(
+            @Valid @RequestBody SocialLoginRequest request) {
+
+        LoginResponse response = authService.mockSocialLogin(request);
         return ResponseEntity.ok(response);
     }
 

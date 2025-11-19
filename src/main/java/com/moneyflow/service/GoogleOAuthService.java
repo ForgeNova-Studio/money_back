@@ -1,0 +1,67 @@
+package com.moneyflow.service;
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Collections;
+
+/**
+ * Google OAuth 검증 서비스
+ * Google ID Token을 검증하고 사용자 정보를 추출합니다.
+ */
+@Service
+public class GoogleOAuthService {
+
+    @Value("${oauth.google.client-id:}")
+    private String clientId;
+
+    /**
+     * Google ID Token 검증 및 사용자 정보 추출
+     *
+     * @param idToken Google ID Token
+     * @return 사용자 정보 (이메일, 이름, providerId)
+     * @throws GeneralSecurityException 토큰 검증 실패
+     * @throws IOException 네트워크 오류
+     * @throws IllegalArgumentException 유효하지 않은 토큰
+     */
+    public GoogleUserInfo verifyIdToken(String idToken) throws GeneralSecurityException, IOException {
+        // Google ID Token Verifier 생성
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(),
+                GsonFactory.getDefaultInstance())
+                .setAudience(Collections.singletonList(clientId))
+                .build();
+
+        // ID Token 검증
+        GoogleIdToken googleIdToken = verifier.verify(idToken);
+        if (googleIdToken == null) {
+            throw new IllegalArgumentException("Invalid Google ID token");
+        }
+
+        // Payload에서 사용자 정보 추출
+        Payload payload = googleIdToken.getPayload();
+        String providerId = payload.getSubject();  // Google User ID
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+        String pictureUrl = (String) payload.get("picture");
+
+        return new GoogleUserInfo(providerId, email, name, pictureUrl);
+    }
+
+    /**
+     * Google 사용자 정보
+     */
+    public record GoogleUserInfo(
+            String providerId,
+            String email,
+            String name,
+            String pictureUrl
+    ) {}
+}
