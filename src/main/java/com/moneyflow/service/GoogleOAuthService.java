@@ -22,6 +22,9 @@ public class GoogleOAuthService {
     @Value("${oauth.google.client-id:}")
     private String clientId;
 
+    @Value("${oauth.google.ios-client-id:}")
+    private String iosClientId;
+
     /**
      * Google ID Token 검증 및 사용자 정보 추출
      *
@@ -32,11 +35,18 @@ public class GoogleOAuthService {
      * @throws IllegalArgumentException 유효하지 않은 토큰
      */
     public GoogleUserInfo verifyIdToken(String idToken) throws GeneralSecurityException, IOException {
+        // 웹, iOS, Android 등 모든 Client ID를 포함
+        java.util.List<String> clientIds = new java.util.ArrayList<>();
+        clientIds.add(clientId);
+        if (iosClientId != null && !iosClientId.isEmpty()) {
+            clientIds.add(iosClientId);
+        }
+
         // Google ID Token Verifier 생성
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(),
                 GsonFactory.getDefaultInstance())
-                .setAudience(Collections.singletonList(clientId))
+                .setAudience(clientIds)
                 .build();
 
         // ID Token 검증
