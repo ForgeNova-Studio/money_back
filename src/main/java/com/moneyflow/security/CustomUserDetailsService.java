@@ -23,9 +23,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
 
+        // 소셜 로그인 사용자는 passwordHash가 null이므로 {noop} prefix 사용 (Spring Security 공식 권장)
+        // {noop}은 "no operation"을 의미하며, 패스워드 인코딩을 하지 않음을 명시
+        String password = user.getPasswordHash() != null ? user.getPasswordHash() : "{noop}SOCIAL_LOGIN_USER";
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUserId().toString(),
-                user.getPasswordHash(),
+                password,
                 new ArrayList<>()
         );
     }
@@ -34,9 +38,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
+        // 소셜 로그인 사용자는 passwordHash가 null이므로 {noop} prefix 사용 (Spring Security 공식 권장)
+        // {noop}은 "no operation"을 의미하며, 패스워드 인코딩을 하지 않음을 명시
+        String password = user.getPasswordHash() != null ? user.getPasswordHash() : "{noop}SOCIAL_LOGIN_USER";
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUserId().toString(),
-                user.getPasswordHash(),
+                password,
                 new ArrayList<>()
         );
     }

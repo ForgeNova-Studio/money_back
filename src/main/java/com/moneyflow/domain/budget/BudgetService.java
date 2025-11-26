@@ -67,11 +67,16 @@ public class BudgetService {
 
     /**
      * 특정 년월의 예산 조회
+     * 예산이 없으면 null 반환 (예산이 없는 것은 정상 상태)
      */
     @Transactional(readOnly = true)
     public BudgetResponse getBudget(UUID userId, Integer year, Integer month) {
         Budget budget = budgetRepository.findByUserUserIdAndYearAndMonth(userId, year, month)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 기간의 예산을 찾을 수 없습니다"));
+                .orElse(null);
+
+        if (budget == null) {
+            return null;
+        }
 
         return toResponse(budget);
     }
