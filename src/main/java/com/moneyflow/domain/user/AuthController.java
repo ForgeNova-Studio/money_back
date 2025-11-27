@@ -1,10 +1,9 @@
 package com.moneyflow.domain.user;
 
-import com.moneyflow.dto.request.LoginRequest;
-import com.moneyflow.dto.request.RegisterRequest;
-import com.moneyflow.dto.request.SocialLoginRequest;
+import com.moneyflow.dto.request.*;
 import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
+import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -101,6 +100,106 @@ public class AuthController {
             @Valid @RequestBody SocialLoginRequest request) {
 
         LoginResponse response = authService.mockSocialLogin(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/send-signup-code")
+    @Operation(
+            summary = "회원가입 인증 코드 발송",
+            description = "회원가입을 위한 6자리 인증 코드를 이메일로 발송합니다. 인증 코드는 10분간 유효합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "인증 코드 발송 성공",
+                    content = @Content(schema = @Schema(implementation = VerificationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "이미 가입된 이메일",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"이미 가입된 이메일입니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<VerificationResponse> sendSignupCode(
+            @Valid @RequestBody SendCodeRequest request) {
+        VerificationResponse response = authService.sendSignupCode(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-signup-code")
+    @Operation(
+            summary = "회원가입 인증 코드 검증",
+            description = "발송된 6자리 인증 코드를 검증합니다. 검증 성공 후 회원가입을 진행할 수 있습니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "인증 성공",
+                    content = @Content(schema = @Schema(implementation = VerificationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "인증 실패 (코드 불일치, 만료 등)",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"인증 코드가 일치하지 않습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<VerificationResponse> verifySignupCode(
+            @Valid @RequestBody VerifyCodeRequest request) {
+        VerificationResponse response = authService.verifySignupCode(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password/send-code")
+    @Operation(
+            summary = "비밀번호 재설정 인증 코드 발송",
+            description = "비밀번호 재설정을 위한 6자리 인증 코드를 이메일로 발송합니다. 인증 코드는 10분간 유효합니다. 소셜 로그인 사용자는 사용할 수 없습니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "인증 코드 발송 성공",
+                    content = @Content(schema = @Schema(implementation = VerificationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "가입되지 않은 이메일 또는 소셜 로그인 사용자",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<VerificationResponse> sendPasswordResetCode(
+            @Valid @RequestBody SendCodeRequest request) {
+        VerificationResponse response = authService.sendPasswordResetCode(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(
+            summary = "비밀번호 재설정",
+            description = "인증 코드를 검증하고 새로운 비밀번호로 재설정합니다. 소셜 로그인 사용자는 사용할 수 없습니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "비밀번호 재설정 성공",
+                    content = @Content(schema = @Schema(implementation = VerificationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "인증 실패 또는 소셜 로그인 사용자",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"인증 코드가 일치하지 않습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<VerificationResponse> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        VerificationResponse response = authService.resetPassword(request);
         return ResponseEntity.ok(response);
     }
 

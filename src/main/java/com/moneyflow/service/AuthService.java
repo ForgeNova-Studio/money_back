@@ -3,11 +3,17 @@ package com.moneyflow.service;
 import com.moneyflow.domain.user.AuthProvider;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
+import com.moneyflow.domain.verification.EmailVerification;
+import com.moneyflow.domain.verification.EmailVerificationRepository;
 import com.moneyflow.dto.request.LoginRequest;
 import com.moneyflow.dto.request.RegisterRequest;
+import com.moneyflow.dto.request.ResetPasswordRequest;
+import com.moneyflow.dto.request.SendCodeRequest;
 import com.moneyflow.dto.request.SocialLoginRequest;
+import com.moneyflow.dto.request.VerifyCodeRequest;
 import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
+import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.exception.BusinessException;
 import com.moneyflow.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +42,8 @@ public class AuthService {
     private final AppleOAuthService appleOAuthService;
     private final NaverOAuthService naverOAuthService;
     private final KakaoOAuthService kakaoOAuthService;
+    private final EmailVerificationRepository emailVerificationRepository;
+    private final EmailService emailService;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -258,5 +266,157 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .profile(profile)
                 .build();
+    }
+
+    /**
+     * 회원가입 인증 코드 발송
+     */
+    @Transactional
+    public VerificationResponse sendSignupCode(SendCodeRequest request) {
+        String email = request.getEmail();
+
+        // 이미 가입된 이메일인지 확인
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException("이미 가입된 이메일입니다");
+        }
+
+        // 기존 미완료 인증 코드 삭제
+        emailVerificationRepository.deleteByEmailAndVerifiedFalse(email);
+
+        // 인증 코드 생성
+        String code = emailService.generateVerificationCode();
+
+        // 인증 정보 저장
+        EmailVerification verification = EmailVerification.builder()
+                .email(email)
+                .verificationCode(code)
+                .verificationType(EmailVerification.VerificationType.SIGNUP)
+                .build();
+        emailVerificationRepository.save(verification);
+
+        // 이메일 발송
+        emailService.sendSignupVerificationEmail(email, code);
+
+        log.info("회원가입 인증 코드 발송: {}", email);
+
+        return VerificationResponse.success("인증 코드가 발송되었습니다. 이메일을 확인해주세요.");
+    }
+
+    /**
+     * 회원가입 인증 코드 검증
+     */
+    @Transactional
+    public VerificationResponse verifySignupCode(VerifyCodeRequest request) {
+        String email = request.getEmail();
+        String code = request.getCode();
+
+        // 인증 정보 조회
+        EmailVerification verification = emailVerificationRepository
+                .findFirstByEmailAndVerificationTypeAndVerifiedFalseOrderByCreatedAtDesc(
+                        email, EmailVerification.VerificationType.SIGNUP)
+                .orElseThrow(() -> new BusinessException("인증 코드를 찾을 수 없습니다"));
+
+        // 만료 확인
+        if (verification.isExpired()) {
+            throw new BusinessException("인증 코드가 만료되었습니다. 다시 요청해주세요.");
+        }
+
+        // 코드 확인
+        if (!verification.getVerificationCode().equals(code)) {
+            throw new BusinessException("인증 코드가 일치하지 않습니다");
+        }
+
+        // 인증 완료 처리
+        verification.markAsVerified();
+        emailVerificationRepository.save(verification);
+
+        log.info("회원가입 인증 코드 검증 완료: {}", email);
+
+        return VerificationResponse.success("인증이 완료되었습니다");
+    }
+
+    /**
+     * 비밀번호 재설정 인증 코드 발송
+     */
+    @Transactional
+    public VerificationResponse sendPasswordResetCode(SendCodeRequest request) {
+        String email = request.getEmail();
+
+        // 가입된 이메일인지 확인
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
+
+        // 소셜 로그인 사용자는 비밀번호 재설정 불가
+        if (user.getProvider() != AuthProvider.EMAIL) {
+            throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
+        }
+
+        // 기존 미완료 인증 코드 삭제
+        emailVerificationRepository.deleteByEmailAndVerifiedFalse(email);
+
+        // 인증 코드 생성
+        String code = emailService.generateVerificationCode();
+
+        // 인증 정보 저장
+        EmailVerification verification = EmailVerification.builder()
+                .email(email)
+                .verificationCode(code)
+                .verificationType(EmailVerification.VerificationType.PASSWORD_RESET)
+                .build();
+        emailVerificationRepository.save(verification);
+
+        // 이메일 발송
+        emailService.sendPasswordResetEmail(email, code);
+
+        log.info("비밀번호 재설정 인증 코드 발송: {}", email);
+
+        return VerificationResponse.success("인증 코드가 발송되었습니다. 이메일을 확인해주세요.");
+    }
+
+    /**
+     * 비밀번호 재설정
+     */
+    @Transactional
+    public VerificationResponse resetPassword(ResetPasswordRequest request) {
+        String email = request.getEmail();
+        String code = request.getCode();
+        String newPassword = request.getNewPassword();
+
+        // 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
+
+        // 소셜 로그인 사용자는 비밀번호 재설정 불가
+        if (user.getProvider() != AuthProvider.EMAIL) {
+            throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
+        }
+
+        // 인증 정보 조회
+        EmailVerification verification = emailVerificationRepository
+                .findFirstByEmailAndVerificationTypeAndVerifiedFalseOrderByCreatedAtDesc(
+                        email, EmailVerification.VerificationType.PASSWORD_RESET)
+                .orElseThrow(() -> new BusinessException("인증 코드를 찾을 수 없습니다"));
+
+        // 만료 확인
+        if (verification.isExpired()) {
+            throw new BusinessException("인증 코드가 만료되었습니다. 다시 요청해주세요.");
+        }
+
+        // 코드 확인
+        if (!verification.getVerificationCode().equals(code)) {
+            throw new BusinessException("인증 코드가 일치하지 않습니다");
+        }
+
+        // 비밀번호 재설정
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // 인증 완료 처리
+        verification.markAsVerified();
+        emailVerificationRepository.save(verification);
+
+        log.info("비밀번호 재설정 완료: {}", email);
+
+        return VerificationResponse.success("비밀번호가 재설정되었습니다");
     }
 }
