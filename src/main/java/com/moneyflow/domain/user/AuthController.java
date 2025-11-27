@@ -3,6 +3,7 @@ package com.moneyflow.domain.user;
 import com.moneyflow.dto.request.*;
 import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
+import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -38,9 +40,41 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다")
     public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request) {
+@Valid @RequestBody LoginRequest request) {
 
         LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    @Operation(
+            summary = "사용자 정보 조회",
+            description = "JWT 토큰을 이용해 현재 로그인한 사용자의 정보를 조회합니다. " +
+                    "Authorization 헤더에 Bearer 토큰을 포함하여 요청해야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "사용자 정보 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserInfoResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증되지 않은 사용자 (토큰 없음 또는 만료)",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"인증되지 않은 사용자입니다\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "사용자를 찾을 수 없음",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"사용자를 찾을 수 없습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<UserInfoResponse> getCurrentUser() {
+        UserInfoResponse response = authService.getCurrentUser();
         return ResponseEntity.ok(response);
     }
 

@@ -13,8 +13,10 @@ import com.moneyflow.dto.request.SocialLoginRequest;
 import com.moneyflow.dto.request.VerifyCodeRequest;
 import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
+import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +24,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -418,5 +423,33 @@ public class AuthService {
         log.info("비밀번호 재설정 완료: {}", email);
 
         return VerificationResponse.success("비밀번호가 재설정되었습니다");
+    }
+
+    /**
+     * 현재 로그인한 사용자 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public UserInfoResponse getCurrentUser() {
+        // SecurityContext에서 현재 인증된 사용자 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BusinessException("인증되지 않은 사용자입니다");
+        }
+
+        // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을 userId.toString()로 설정했음)
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetails)) {
+            throw new BusinessException("인증 정보가 올바르지 않습니다");
+        }
+
+        String userIdString = ((UserDetails) principal).getUsername();
+        UUID userId = UUID.fromString(userIdString);
+
+        // DB에서 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        return UserInfoResponse.from(user);
     }
 }
