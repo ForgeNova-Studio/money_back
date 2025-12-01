@@ -242,4 +242,66 @@ public class AuthController {
     public ResponseEntity<String> healthCheck() {
         return ResponseEntity.ok("OK");
     }
+
+    // ========== 개발용 API ==========
+
+    @GetMapping("/dev/users")
+    @Operation(
+            summary = "[개발용] 이메일로 유저 조회",
+            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+                    "이메일로 유저 정보를 간단하게 조회합니다. " +
+                    "프로덕션 환경에서는 비활성화되어야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserInfoResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "유저를 찾을 수 없음",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"사용자를 찾을 수 없습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<UserInfoResponse> getUserByEmail(
+            @RequestParam("email") String email) {
+        UserInfoResponse response = authService.getUserByEmail(email);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/dev/users")
+    @Operation(
+            summary = "[개발용] 유저 완전 삭제",
+            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+                    "이메일로 유저를 데이터베이스에서 완전히 삭제합니다. " +
+                    "이 작업은 되돌릴 수 없습니다. " +
+                    "프로덕션 환경에서는 비활성화되어야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 삭제 성공",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"message\": \"유저가 삭제되었습니다\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "유저를 찾을 수 없음",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"사용자를 찾을 수 없습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<?> deleteUserByEmail(
+            @RequestParam("email") String email) {
+        authService.deleteUserByEmail(email);
+        return ResponseEntity.ok().body(new MessageResponse("유저가 삭제되었습니다"));
+    }
+
+    // 간단한 응답용 DTO
+    private record MessageResponse(String message) {}
 }

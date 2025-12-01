@@ -452,4 +452,33 @@ public class AuthService {
 
         return UserInfoResponse.from(user);
     }
+
+    // ========== 개발용 메서드 ==========
+
+    /**
+     * [개발용] 이메일로 유저 조회
+     * ️ 개발/테스트 전용 - 프로덕션 환경에서는 비활성화되어야 합니다.
+     */
+    @Transactional(readOnly = true)
+    public UserInfoResponse getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        log.info("[개발용] 유저 조회: {} ({})", user.getEmail(), user.getUserId());
+        return UserInfoResponse.from(user);
+    }
+
+    /**
+     * [개발용] 유저 완전 삭제
+     * ️ 개발/테스트 전용 - 프로덕션 환경에서는 비활성화되어야 합니다.
+     * DB에서 유저를 완전히 삭제합니다 (되돌릴 수 없음).
+     */
+    @Transactional
+    public void deleteUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        log.warn("[개발용] 유저 삭제: {} ({})", user.getEmail(), user.getUserId());
+        userRepository.delete(user);
+    }
 }
