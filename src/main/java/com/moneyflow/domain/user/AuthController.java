@@ -237,6 +237,32 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "JWT 토큰 갱신",
+            description = "Refresh Token을 사용하여 새로운 Access Token과 Refresh Token을 발급받습니다. " +
+                    "Access Token이 만료되었을 때 사용합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "토큰 갱신 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "유효하지 않거나 만료된 Refresh Token",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"유효하지 않거나 만료된 Refresh Token입니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<LoginResponse> refreshToken(
+            @Valid @RequestBody com.moneyflow.dto.request.RefreshTokenRequest request) {
+        LoginResponse response = authService.refreshToken(request.getRefreshToken());
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/health")
     @Operation(summary = "헬스 체크", description = "API 서버 상태 확인")
     public ResponseEntity<String> healthCheck() {
@@ -244,6 +270,25 @@ public class AuthController {
     }
 
     // ========== 개발용 API ==========
+
+    @GetMapping("/dev/users/all")
+    @Operation(
+            summary = "[개발용] 전체 유저 목록 조회",
+            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+                    "데이터베이스에 등록된 모든 유저의 목록을 조회합니다. " +
+                    "프로덕션 환경에서는 비활성화되어야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserInfoResponse.class))
+            )
+    })
+    public ResponseEntity<java.util.List<UserInfoResponse>> getAllUsers() {
+        java.util.List<UserInfoResponse> users = authService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
 
     @GetMapping("/dev/users")
     @Operation(

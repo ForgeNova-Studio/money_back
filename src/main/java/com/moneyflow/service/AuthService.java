@@ -453,6 +453,44 @@ public class AuthService {
         return UserInfoResponse.from(user);
     }
 
+    /**
+     * JWT Refresh Token으로 새로운 Access Token 발급
+     */
+    @Transactional(readOnly = true)
+    public LoginResponse refreshToken(String refreshToken) {
+        // Refresh token 검증
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new BusinessException("유효하지 않거나 만료된 Refresh Token입니다");
+        }
+
+        // Refresh token에서 사용자 ID 추출
+        UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        log.info("토큰 갱신: {} ({})", user.getEmail(), user.getUserId());
+
+        // 새로운 Access Token 및 Refresh Token 생성
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        // 프로필 정보 생성
+        LoginResponse.UserProfile profile = LoginResponse.UserProfile.builder()
+                .nickname(user.getNickname())
+                .email(user.getEmail())
+                .profileImage(user.getProfileImageUrl())
+                .build();
+
+        return LoginResponse.builder()
+                .userId(user.getUserId())
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .profile(profile)
+                .build();
+    }
+
     // ========== 개발용 메서드 ==========
 
     /**
@@ -466,6 +504,18 @@ public class AuthService {
 
         log.info("[개발용] 유저 조회: {} ({})", user.getEmail(), user.getUserId());
         return UserInfoResponse.from(user);
+    }
+
+    /**
+     * [개발용] 전체 유저 목록 조회
+     * ️ 개발/테스트 전용 - 프로덕션 환경에서는 비활성화되어야 합니다.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<UserInfoResponse> getAllUsers() {
+        log.info("[개발용] 전체 유저 목록 조회");
+        return userRepository.findAll().stream()
+                .map(UserInfoResponse::from)
+                .toList();
     }
 
     /**
