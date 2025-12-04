@@ -57,14 +57,31 @@ public class AuthService {
             throw new BusinessException("이미 사용 중인 이메일입니다");
         }
 
+        // 이메일 인증 완료 여부 확인
+        EmailVerification verification = emailVerificationRepository
+                .findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
+                        request.getEmail(),
+                        EmailVerification.VerificationType.SIGNUP
+                )
+                .orElseThrow(() -> new BusinessException("이메일 인증을 먼저 완료해주세요"));
+
+        // 인증 완료 후 5분 이내 확인
+        if (verification.isExpiredForRegistration()) {
+            throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요");
+        }
+
         // 사용자 생성
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
+                .gender(request.getGender())
                 .build();
 
         user = userRepository.save(user);
+
+        // 사용한 인증 정보 삭제 (재사용 방지)
+        emailVerificationRepository.delete(verification);
 
         log.info("새로운 사용자 등록: {}", user.getEmail());
 

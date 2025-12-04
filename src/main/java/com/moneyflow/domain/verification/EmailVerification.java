@@ -99,6 +99,17 @@ public class EmailVerification {
     }
 
     /**
+     * 회원가입 가능 시간 만료 여부 확인
+     * 인증 완료 후 5분 이내에만 회원가입 가능
+     */
+    public boolean isExpiredForRegistration() {
+        if (verifiedAt == null) {
+            return true; // 인증 완료되지 않음
+        }
+        return LocalDateTime.now().isAfter(verifiedAt.plusMinutes(5));
+    }
+
+    /**
      * 인증 유형 열거형
      */
     public enum VerificationType {

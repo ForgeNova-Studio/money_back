@@ -1,5 +1,6 @@
 package com.moneyflow.dto.response;
 
+import com.moneyflow.domain.user.Gender;
 import com.moneyflow.domain.user.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,9 @@ public class UserInfoResponse {
     @Schema(description = "프로필 이미지 URL (없으면 null)", example = "https://example.com/profile.jpg", nullable = true)
     private String profileImageUrl;
 
+    @Schema(description = "성별 (MALE: 남성, FEMALE: 여성)", example = "MALE")
+    private Gender gender;
+
     /**
      * User 엔티티로부터 UserInfoResponse 생성
      */
@@ -40,6 +44,7 @@ public class UserInfoResponse {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
+                .gender(user.getGender())
                 .build();
     }
 }

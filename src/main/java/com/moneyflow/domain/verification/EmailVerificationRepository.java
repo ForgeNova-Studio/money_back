@@ -37,4 +37,11 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
      */
     Optional<EmailVerification> findByEmailAndVerificationTypeAndVerifiedTrue(
             String email, EmailVerification.VerificationType verificationType);
+
+    /**
+     * 인증 완료된 정보 조회 (최신순)
+     * 회원가입 시 사용 - 가장 최근에 인증 완료된 정보를 조회
+     */
+    Optional<EmailVerification> findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
+            String email, EmailVerification.VerificationType verificationType);
 }
