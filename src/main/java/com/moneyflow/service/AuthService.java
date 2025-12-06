@@ -17,6 +17,7 @@ import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.exception.BusinessException;
 import com.moneyflow.exception.ResourceNotFoundException;
+import com.moneyflow.exception.UnauthorizedException;
 import com.moneyflow.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -451,13 +452,13 @@ public class AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new BusinessException("인증되지 않은 사용자입니다");
+            throw new UnauthorizedException("인증되지 않은 사용자입니다");
         }
 
         // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을 userId.toString()로 설정했음)
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetails)) {
-            throw new BusinessException("인증 정보가 올바르지 않습니다");
+            throw new UnauthorizedException("인증 정보가 올바르지 않습니다");
         }
 
         String userIdString = ((UserDetails) principal).getUsername();
@@ -465,7 +466,7 @@ public class AuthService {
 
         // DB에서 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new UnauthorizedException("사용자를 찾을 수 없습니다"));
 
         return UserInfoResponse.from(user);
     }

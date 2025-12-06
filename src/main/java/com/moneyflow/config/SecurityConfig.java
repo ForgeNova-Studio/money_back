@@ -1,5 +1,6 @@
 package com.moneyflow.config;
 
+import com.moneyflow.security.CustomAuthenticationEntryPoint;
 import com.moneyflow.security.CustomUserDetailsService;
 import com.moneyflow.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,6 +48,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception ->
+                exception.authenticationEntryPoint(authenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(
