@@ -1,5 +1,7 @@
 package com.moneyflow.service;
 
+import com.moneyflow.domain.token.RefreshToken;
+import com.moneyflow.domain.token.RefreshTokenRepository;
 import com.moneyflow.domain.user.AuthProvider;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
@@ -32,7 +34,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.UUID;
 
 @Service
@@ -50,6 +57,7 @@ public class AuthService {
     private final KakaoOAuthService kakaoOAuthService;
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailService emailService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -117,6 +125,9 @@ public class AuthService {
             // JWT 토큰 생성
             String accessToken = jwtTokenProvider.generateAccessToken(user);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+            // Refresh Token DB에 저장
+            saveRefreshToken(refreshToken, user);
 
             // 프로필 정보 생성
             LoginResponse.UserProfile profile = LoginResponse.UserProfile.builder()
@@ -216,6 +227,9 @@ public class AuthService {
             String accessToken = jwtTokenProvider.generateAccessToken(user);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
+            // Refresh Token DB에 저장
+            saveRefreshToken(refreshToken, user);
+
             // 프로필 정보 생성
             LoginResponse.UserProfile profile = LoginResponse.UserProfile.builder()
                     .nickname(user.getNickname())
@@ -275,6 +289,9 @@ public class AuthService {
         // JWT 토큰 생성
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        // Refresh Token DB에 저장
+        saveRefreshToken(refreshToken, user);
 
         // 프로필 정보 생성
         LoginResponse.UserProfile profile = LoginResponse.UserProfile.builder()
@@ -472,27 +489,51 @@ public class AuthService {
     }
 
     /**
-     * JWT Refresh Token으로 새로운 Access Token 발급
+     * JWT Refresh Token으로 새로운 Access Token 발급 (Rotation 정책)
+     *
+     * Rotation 정책:
+     * 1. 기존 Refresh Token 무효화
+     * 2. 새 Refresh Token 발급 및 DB 저장
+     * 3. 탈취된 토큰은 1회만 사용 가능
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse refreshToken(String refreshToken) {
-        // Refresh token 검증
+        // STEP 1: JWT 검증 (빠른 검증 - 서명, 만료시간)
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new BusinessException("유효하지 않거나 만료된 Refresh Token입니다");
+            throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다");
         }
 
-        // Refresh token에서 사용자 ID 추출
+        // STEP 2: DB 검증 (상태 확인)
+        String tokenHash = hashToken(refreshToken);
+        RefreshToken refreshTokenEntity = refreshTokenRepository
+                .findByTokenHashAndRevokedFalse(tokenHash)
+                .orElseThrow(() -> new UnauthorizedException("유효하지 않은 Refresh Token입니다"));
+
+        // DB 만료시간 확인
+        if (refreshTokenEntity.isExpired()) {
+            throw new UnauthorizedException("만료된 Refresh Token입니다");
+        }
+
+        // JWT에서 사용자 ID 추출
         UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
 
         // 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
 
-        log.info("토큰 갱신: {} ({})", user.getEmail(), user.getUserId());
+        log.info("토큰 갱신 (Rotation): {} ({})", user.getEmail(), user.getUserId());
 
-        // 새로운 Access Token 및 Refresh Token 생성
+        // STEP 3: Rotation 정책 - 기존 토큰 무효화
+        refreshTokenEntity.revoke();
+        refreshTokenRepository.save(refreshTokenEntity);
+        log.debug("기존 Refresh Token 무효화: {}", tokenHash.substring(0, 10) + "...");
+
+        // STEP 4: 새로운 Access Token 및 Refresh Token 생성
         String newAccessToken = jwtTokenProvider.generateAccessToken(user);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        // STEP 5: 새 Refresh Token DB에 저장
+        saveRefreshToken(newRefreshToken, user);
 
         // 프로필 정보 생성
         LoginResponse.UserProfile profile = LoginResponse.UserProfile.builder()
@@ -548,5 +589,66 @@ public class AuthService {
 
         log.warn("[개발용] 유저 삭제: {} ({})", user.getEmail(), user.getUserId());
         userRepository.delete(user);
+    }
+
+    // ========== Refresh Token 관리 ==========
+
+    /**
+     * Refresh Token을 DB에 저장
+     *
+     * @param refreshToken JWT Refresh Token
+     * @param user         사용자
+     */
+    private void saveRefreshToken(String refreshToken, User user) {
+        String tokenHash = hashToken(refreshToken);
+
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(LocalDateTime.now().plusDays(30))
+                .revoked(false)
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+        log.debug("Refresh Token 저장: 사용자 {} ({})", user.getEmail(), user.getUserId());
+    }
+
+    /**
+     * Refresh Token의 SHA-256 해시값 생성
+     *
+     * 보안을 위해 실제 토큰이 아닌 해시값만 DB에 저장합니다.
+     *
+     * @param token Refresh Token
+     * @return SHA-256 해시값 (Base64 인코딩)
+     */
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 알고리즘을 찾을 수 없습니다", e);
+        }
+    }
+
+    /**
+     * 로그아웃 (Refresh Token 무효화)
+     *
+     * @param refreshToken JWT Refresh Token
+     */
+    @Transactional
+    public void logout(String refreshToken) {
+        String tokenHash = hashToken(refreshToken);
+
+        RefreshToken refreshTokenEntity = refreshTokenRepository
+                .findByTokenHash(tokenHash)
+                .orElseThrow(() -> new BusinessException("유효하지 않은 Refresh Token입니다"));
+
+        refreshTokenEntity.revoke();
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        log.info("로그아웃: 사용자 {} ({})",
+                refreshTokenEntity.getUser().getEmail(),
+                refreshTokenEntity.getUser().getUserId());
     }
 }

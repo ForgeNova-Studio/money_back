@@ -263,6 +263,31 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/logout")
+    @Operation(
+            summary = "로그아웃",
+            description = "Refresh Token을 무효화하여 로그아웃합니다. " +
+                    "이후 해당 Refresh Token으로는 새로운 Access Token을 발급받을 수 없습니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "로그아웃 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "유효하지 않은 Refresh Token",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"유효하지 않은 Refresh Token입니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody com.moneyflow.dto.request.RefreshTokenRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/health")
     @Operation(summary = "헬스 체크", description = "API 서버 상태 확인")
     public ResponseEntity<String> healthCheck() {
