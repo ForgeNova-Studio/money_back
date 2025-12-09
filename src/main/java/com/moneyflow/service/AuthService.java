@@ -7,6 +7,7 @@ import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.domain.verification.EmailVerification;
 import com.moneyflow.domain.verification.EmailVerificationRepository;
+import com.moneyflow.dto.request.ChangePasswordRequest;
 import com.moneyflow.dto.request.LoginRequest;
 import com.moneyflow.dto.request.RegisterRequest;
 import com.moneyflow.dto.request.ResetPasswordRequest;
@@ -414,22 +415,15 @@ public class AuthService {
     }
 
     /**
-     * 비밀번호 재설정
+     * 비밀번호 재설정 인증 코드 검증
+     *
+     * @param request 인증 코드 검증 요청
+     * @return 검증 결과
      */
     @Transactional
-    public VerificationResponse resetPassword(ResetPasswordRequest request) {
+    public VerificationResponse verifyPasswordResetCode(VerifyCodeRequest request) {
         String email = request.getEmail();
         String code = request.getCode();
-        String newPassword = request.getNewPassword();
-
-        // 사용자 조회
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
-
-        // 소셜 로그인 사용자는 비밀번호 재설정 불가
-        if (user.getProvider() != AuthProvider.EMAIL) {
-            throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
-        }
 
         // 인증 정보 조회
         EmailVerification verification = emailVerificationRepository
@@ -447,13 +441,52 @@ public class AuthService {
             throw new BusinessException("인증 코드가 일치하지 않습니다");
         }
 
+        // 인증 완료 처리
+        verification.markAsVerified();
+        emailVerificationRepository.save(verification);
+
+        log.info("비밀번호 재설정 인증 코드 검증 완료: {}", email);
+
+        return VerificationResponse.success("인증이 완료되었습니다. 새 비밀번호를 설정해주세요.");
+    }
+
+    /**
+     * 비밀번호 재설정 (인증 완료 후)
+     *
+     * @param request 비밀번호 변경 요청
+     * @return 재설정 결과
+     */
+    @Transactional
+    public VerificationResponse resetPassword(ChangePasswordRequest request) {
+        String email = request.getEmail();
+        String newPassword = request.getNewPassword();
+
+        // 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
+
+        // 소셜 로그인 사용자는 비밀번호 재설정 불가
+        if (user.getProvider() != AuthProvider.EMAIL) {
+            throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
+        }
+
+        // 인증 완료된 정보 조회 (가장 최근 것)
+        EmailVerification verification = emailVerificationRepository
+                .findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
+                        email, EmailVerification.VerificationType.PASSWORD_RESET)
+                .orElseThrow(() -> new BusinessException("인증을 먼저 완료해주세요"));
+
+        // 인증 후 5분 이내인지 확인
+        if (verification.isExpiredForRegistration()) {
+            throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요.");
+        }
+
         // 비밀번호 재설정
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // 인증 완료 처리
-        verification.markAsVerified();
-        emailVerificationRepository.save(verification);
+        // 사용된 인증 정보 삭제
+        emailVerificationRepository.delete(verification);
 
         log.info("비밀번호 재설정 완료: {}", email);
 

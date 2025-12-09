@@ -212,10 +212,35 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/reset-password/verify-code")
+    @Operation(
+            summary = "비밀번호 재설정 인증 코드 검증",
+            description = "발송된 6자리 인증 코드를 검증합니다. 검증 성공 후 5분 이내에 비밀번호를 재설정해야 합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "인증 성공",
+                    content = @Content(schema = @Schema(implementation = VerificationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "인증 실패 (코드 불일치, 만료 등)",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"error\": \"인증 코드가 일치하지 않습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<VerificationResponse> verifyPasswordResetCode(
+            @Valid @RequestBody VerifyCodeRequest request) {
+        VerificationResponse response = authService.verifyPasswordResetCode(request);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/reset-password")
     @Operation(
             summary = "비밀번호 재설정",
-            description = "인증 코드를 검증하고 새로운 비밀번호로 재설정합니다. 소셜 로그인 사용자는 사용할 수 없습니다."
+            description = "인증 완료 후 새로운 비밀번호로 재설정합니다. 인증 완료 후 5분 이내에 재설정해야 합니다. 소셜 로그인 사용자는 사용할 수 없습니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -225,14 +250,14 @@ public class AuthController {
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "인증 실패 또는 소셜 로그인 사용자",
+                    description = "인증 미완료, 시간 만료, 또는 소셜 로그인 사용자",
                     content = @Content(
-                            examples = @ExampleObject(value = "{\"error\": \"인증 코드가 일치하지 않습니다\"}")
+                            examples = @ExampleObject(value = "{\"error\": \"인증을 먼저 완료해주세요\"}")
                     )
             )
     })
     public ResponseEntity<VerificationResponse> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request) {
         VerificationResponse response = authService.resetPassword(request);
         return ResponseEntity.ok(response);
     }
