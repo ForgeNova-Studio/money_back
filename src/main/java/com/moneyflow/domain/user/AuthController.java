@@ -162,7 +162,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/verify-signup-code")
+    @PostMapping("/verify-reset-password-code")
     @Operation(
             summary = "회원가입 인증 코드 검증",
             description = "발송된 6자리 인증 코드를 검증합니다. 검증 성공 후 회원가입을 진행할 수 있습니다."
