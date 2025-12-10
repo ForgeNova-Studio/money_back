@@ -4,6 +4,7 @@ import com.moneyflow.security.CustomAuthenticationEntryPoint;
 import com.moneyflow.security.CustomUserDetailsService;
 import com.moneyflow.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -29,6 +31,9 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
+    @Value("${cors.allowed-origins:*}")
+    private String allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -71,10 +76,22 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+
+        // 환경변수로 CORS Origin 제어
+        // dev: "*" (모든 Origin 허용)
+        // prod: "https://app.moneyflow.com,https://www.moneyflow.com" (특정 도메인만 허용)
+        if ("*".equals(allowedOrigins)) {
+            // 개발 환경: 모든 Origin 허용 (allowCredentials와 함께 사용 불가)
+            configuration.setAllowedOriginPatterns(List.of("*"));
+            configuration.setAllowCredentials(false);
+        } else {
+            // 프로덕션 환경: 특정 도메인만 허용
+            configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            configuration.setAllowCredentials(true);
+        }
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

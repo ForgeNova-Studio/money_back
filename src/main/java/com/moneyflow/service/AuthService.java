@@ -99,6 +99,9 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
+        // Refresh Token DB에 저장
+        saveRefreshToken(refreshToken, user);
+
         return RegisterResponse.builder()
                 .userId(user.getUserId())
                 .accessToken(accessToken)

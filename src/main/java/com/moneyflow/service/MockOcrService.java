@@ -20,6 +20,7 @@ import java.util.Random;
 public class MockOcrService implements OcrService {
 
     private final CategoryClassifier categoryClassifier;
+    private final FileStorageService fileStorageService;
     private final Random random = new Random();
 
     private static final String[] MERCHANTS = {
@@ -38,23 +39,28 @@ public class MockOcrService implements OcrService {
     public OcrResponse processImage(MultipartFile image) {
         log.info("Processing OCR with Mock Service: {}", image.getOriginalFilename());
 
-        // 랜덤 가맹점 선택
+        // 1. 이미지 파일 저장
+        String savedFilename = fileStorageService.storeFile(image);
+        log.info("Image saved: {}", savedFilename);
+
+        // 2. 랜덤 가맹점 선택
         String merchant = MERCHANTS[random.nextInt(MERCHANTS.length)];
 
-        // 랜덤 금액 생성 (1,000 ~ 100,000원)
+        // 3. 랜덤 금액 생성 (1,000 ~ 100,000원)
         BigDecimal amount = BigDecimal.valueOf((random.nextInt(99) + 1) * 1000);
 
-        // 랜덤 날짜 (최근 7일 이내)
+        // 4. 랜덤 날짜 (최근 7일 이내)
         LocalDate date = LocalDate.now().minusDays(random.nextInt(7));
 
-        // 카테고리 자동 분류
+        // 5. 카테고리 자동 분류
         String suggestedCategory = categoryClassifier.classify(merchant);
 
+        // 6. 원본 텍스트 생성 (실제 OCR 결과 시뮬레이션)
         String rawText = String.format("승인 %s원\n%s\n%s",
                 String.format("%,d", amount.intValue()), merchant, date);
 
-        log.info("Mock OCR result: merchant={}, amount={}, category={}",
-                merchant, amount, suggestedCategory);
+        log.info("Mock OCR result: merchant={}, amount={}, category={}, saved={}",
+                merchant, amount, suggestedCategory, savedFilename);
 
         return OcrResponse.builder()
                 .amount(amount)

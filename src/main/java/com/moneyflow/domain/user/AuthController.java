@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -114,6 +115,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @Profile("dev")  // ✅ dev 프로파일에서만 활성화
     @PostMapping("/social-login/mock")
     @Operation(
             summary = "[개발용] Mock 소셜 로그인",
@@ -121,7 +123,7 @@ public class AuthController {
                     "실제 ID Token/Access Token 없이 소셜 로그인을 테스트할 수 있습니다. " +
                     "지원: GOOGLE, APPLE, NAVER, KAKAO. " +
                     "idToken 필드에 임의의 문자열을 입력하면 됩니다. " +
-                    "프로덕션 환경에서는 비활성화되어야 합니다."
+                    "프로덕션 환경에서는 자동으로 비활성화됩니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -321,12 +323,13 @@ public class AuthController {
 
     // ========== 개발용 API ==========
 
+    @Profile("dev")  // ✅ dev 프로파일에서만 활성화
     @GetMapping("/dev/users/all")
     @Operation(
             summary = "[개발용] 전체 유저 목록 조회",
-            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+            description = "⚠️ 개발/테스트 전용 엔드포인트입니다. " +
                     "데이터베이스에 등록된 모든 유저의 목록을 조회합니다. " +
-                    "프로덕션 환경에서는 비활성화되어야 합니다."
+                    "프로덕션 환경에서는 자동으로 비활성화됩니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -340,12 +343,13 @@ public class AuthController {
         return ResponseEntity.ok(users);
     }
 
+    @Profile("dev")  // ✅ dev 프로파일에서만 활성화
     @GetMapping("/dev/users")
     @Operation(
             summary = "[개발용] 이메일로 유저 조회",
-            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+            description = "⚠️ 개발/테스트 전용 엔드포인트입니다. " +
                     "이메일로 유저 정보를 간단하게 조회합니다. " +
-                    "프로덕션 환경에서는 비활성화되어야 합니다."
+                    "프로덕션 환경에서는 자동으로 비활성화됩니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -367,13 +371,14 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @Profile("dev")  // ✅ dev 프로파일에서만 활성화
     @DeleteMapping("/dev/users")
     @Operation(
             summary = "[개발용] 유저 완전 삭제",
-            description = "️ 개발/테스트 전용 엔드포인트입니다. " +
+            description = "⚠️ 개발/테스트 전용 엔드포인트입니다. " +
                     "이메일로 유저를 데이터베이스에서 완전히 삭제합니다. " +
                     "이 작업은 되돌릴 수 없습니다. " +
-                    "프로덕션 환경에서는 비활성화되어야 합니다."
+                    "프로덕션 환경에서는 자동으로 비활성화됩니다."
     )
     @ApiResponses({
             @ApiResponse(
