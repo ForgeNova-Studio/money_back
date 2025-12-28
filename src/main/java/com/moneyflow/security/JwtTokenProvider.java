@@ -52,6 +52,7 @@ public class JwtTokenProvider {
                 .setSubject(user.getUserId().toString())
                 .claim("email", user.getEmail())
                 .claim("nickname", user.getNickname())
+                .claim("role", "USER") // 모든 사용자는 USER 역할
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -78,6 +79,19 @@ public class JwtTokenProvider {
                 .getBody();
 
         return UUID.fromString(claims.getSubject());
+    }
+
+    /**
+     * JWT 토큰에서 모든 Claims를 추출
+     * @param token JWT 토큰
+     * @return Claims 객체 (subject=userId, email, nickname, role 포함)
+     */
+    public Claims getAllClaimsFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public boolean validateToken(String token) {
