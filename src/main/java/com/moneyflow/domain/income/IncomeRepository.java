@@ -71,4 +71,13 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
      * @return 사용자의 수입이면 true
      */
     boolean existsByIncomeIdAndUserUserId(UUID incomeId, UUID userId);
+
+    /**
+     * 기간별 모든 수입 조회 (홈 화면 월간 데이터용)
+     *
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @return 조회된 수입 목록
+     */
+    List<Income> findByDateBetween(LocalDate startDate, LocalDate endDate);
 }
