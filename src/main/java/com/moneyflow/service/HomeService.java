@@ -55,7 +55,7 @@ public class HomeService {
                 totalExpense += expense.getAmount().longValue();
 
                 transactionDtos.add(TransactionDto.builder()
-                        .id(expense.getExpenseId().hashCode() & 0xFFFFFFFFL) // UUID -> Long 변환 (임시)
+                        .id(expense.getExpenseId().toString()) // UUID를 String으로 변환
                         .type("EXPENSE")
                         .amount(expense.getAmount().longValue())
                         .title(expense.getMerchant() != null ? expense.getMerchant() : expense.getCategory())
@@ -70,7 +70,7 @@ public class HomeService {
                 totalIncome += income.getAmount().longValue();
 
                 transactionDtos.add(TransactionDto.builder()
-                        .id(income.getIncomeId().hashCode() & 0xFFFFFFFFL) // UUID -> Long 변환 (임시)
+                        .id(income.getIncomeId().toString()) // UUID를 String으로 변환
                         .type("INCOME")
                         .amount(income.getAmount().longValue())
                         .title(income.getSource())
