@@ -50,4 +50,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
 
     // 기간별 모든 지출 조회 (홈 화면 월간 데이터용)
     List<Expense> findByDateBetween(LocalDate startDate, LocalDate endDate);
+
+    // 사용자별 기간 지출 조회 (홈 화면 월간 데이터용)
+    List<Expense> findByUser_UserIdAndDateBetween(UUID userId, LocalDate startDate, LocalDate endDate);
 }

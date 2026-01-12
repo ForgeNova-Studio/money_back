@@ -8,9 +8,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Tag(name = "Home", description = "홈 화면 API")
 @RestController
@@ -28,14 +31,16 @@ public class HomeController {
     })
     @GetMapping("/monthly-data")
     public ResponseEntity<Map<String, DailySummaryDto>> getMonthlyData(
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam String yearMonth // "2025-12"
     ) {
+        UUID userId = UUID.fromString(userDetails.getUsername());
         // yearMonth 파싱 (예: "2025-12" → year=2025, month=12)
         String[] parts = yearMonth.split("-");
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);
 
-        Map<String, DailySummaryDto> data = homeService.getMonthlyData(year, month);
+        Map<String, DailySummaryDto> data = homeService.getMonthlyData(userId, year, month);
         return ResponseEntity.ok(data);
     }
 }

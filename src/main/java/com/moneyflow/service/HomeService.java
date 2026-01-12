@@ -20,14 +20,16 @@ public class HomeService {
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
 
-    public Map<String, DailySummaryDto> getMonthlyData(int year, int month) {
+    public Map<String, DailySummaryDto> getMonthlyData(UUID userId, int year, int month) {
         // 1. 해당 월의 시작일과 종료일 계산
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
         // 2. 한 달 치 데이터 한 번에 조회 (DB 쿼리 2회)
-        List<Expense> allExpenses = expenseRepository.findByDateBetween(startDate, endDate);
-        List<Income> allIncomes = incomeRepository.findByDateBetween(startDate, endDate);
+        List<Expense> allExpenses = expenseRepository.findByUser_UserIdAndDateBetween(
+                userId, startDate, endDate);
+        List<Income> allIncomes = incomeRepository.findByUser_UserIdAndDateBetween(
+                userId, startDate, endDate);
 
         // 3. 날짜별로 데이터 그룹화
         Map<LocalDate, List<Expense>> expensesByDate = allExpenses.stream()

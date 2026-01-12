@@ -80,4 +80,14 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
      * @return 조회된 수입 목록
      */
     List<Income> findByDateBetween(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 사용자별 기간 수입 조회 (홈 화면 월간 데이터용)
+     *
+     * @param userId 사용자 ID
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @return 조회된 수입 목록
+     */
+    List<Income> findByUser_UserIdAndDateBetween(UUID userId, LocalDate startDate, LocalDate endDate);
 }
