@@ -55,8 +55,8 @@ public class OpenApiConfig {
 
                 ```json
                 {
-                  "email": "test1@test.com",
-                  "password": "test1234"
+                  "email": "testuser1@test.com",
+                  "password": "password"
                 }
                 ```
 
@@ -82,29 +82,17 @@ public class OpenApiConfig {
 
                 ## 🧪 테스트 계정 정보
 
-                ### 개인 사용자 계정
-                - **이메일**: `test1@test.com`
-                - **비밀번호**: `test1234`
-                - **닉네임**: 테스트사용자
-                - **설명**: 이미 등록된 테스트 계정입니다. 지출 데이터가 일부 등록되어 있습니다.
+                ### 개인 사용자 계정 1
+                - **이메일**: `testuser1@test.com`
+                - **비밀번호**: `password`
+                - **닉네임**: 테스트유저1
+                - **설명**: 기본 테스트 계정입니다. 장부 생성 및 지출 관리를 테스트할 수 있습니다.
 
-                ### 커플 사용자 계정 1
-                - **이메일**: `couple1@test.com`
-                - **비밀번호**: `test1234`
-                - **닉네임**: 커플사용자1
-                - **설명**: 커플 모드 테스트용 계정입니다.
-
-                ### 커플 사용자 계정 2
-                - **이메일**: `couple2@test.com`
-                - **비밀번호**: `test1234`
-                - **닉네임**: 커플사용자2
-                - **설명**: 커플 모드 테스트용 계정입니다.
-
-                ### 싱글 사용자 계정
-                - **이메일**: `single@test.com`
-                - **비밀번호**: `test1234`
-                - **닉네임**: 싱글사용자
-                - **설명**: 커플 연동이 없는 개인 계정입니다.
+                ### 개인 사용자 계정 2
+                - **이메일**: `testuser2@test.com`
+                - **비밀번호**: `password`
+                - **닉네임**: 테스트유저2
+                - **설명**: 커플 모드 테스트용 계정입니다. testuser1과 커플 연동할 수 있습니다.
 
                 ## 📌 주요 기능별 테스트 시나리오
 
@@ -122,10 +110,20 @@ public class OpenApiConfig {
                    - 예시: `startDate=2025-11-11`
 
                 ### 💑 커플 모드 테스트
-                1. `POST /api/couples/invite` - 초대 코드 생성 (couple1 계정)
-                2. `POST /api/couples/join` - 초대 코드로 가입 (couple2 계정)
+                1. `POST /api/couples/invite` - 초대 코드 생성 (testuser1 계정)
+                2. `POST /api/couples/join` - 초대 코드로 가입 (testuser2 계정으로 로그인 후)
                 3. `GET /api/couples/me` - 현재 커플 정보 조회
-                4. `DELETE /api/couples/unlink` - 커플 연동 해제
+                4. `GET /api/account-books` - "우리의 생활비" 기본 장부 자동 생성 확인
+                5. `DELETE /api/couples/unlink` - 커플 연동 해제
+
+                ### 📒 장부 관리 테스트
+                1. `POST /api/account-books` - 새 장부 생성
+                   - 예시: `{"name":"제주도 여행","bookType":"TRIP","memberCount":2,"description":"2026년 1월 제주도 여행"}`
+                2. `GET /api/account-books` - 내 장부 목록 조회
+                3. `GET /api/account-books/{accountBookId}` - 장부 상세 조회
+                4. `POST /api/expenses` - 지출 등록 시 accountBookId 연결
+                   - 예시: `{"amount":35000,"category":"FOOD","merchant":"성산 해녀의집","date":"2026-01-20","accountBookId":"장부ID","fundingSource":"SHARED_POOL"}`
+                5. `POST /api/account-books/{accountBookId}/members` - 멤버 추가
 
                 ## ⚠️ 참고사항
 
