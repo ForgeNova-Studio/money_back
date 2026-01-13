@@ -1,5 +1,7 @@
 package com.moneyflow.domain.expense;
 
+import com.moneyflow.domain.accountbook.AccountBook;
+import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.ExpenseRequest;
@@ -26,6 +28,7 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
+    private final AccountBookRepository accountBookRepository;
     private final CategoryClassifier categoryClassifier;
 
     /**
@@ -35,6 +38,21 @@ public class ExpenseService {
     public ExpenseResponse createExpense(UUID userId, ExpenseRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        // 장부 ID가 제공된 경우 검증
+        AccountBook accountBook = null;
+        if (request.getAccountBookId() != null) {
+            accountBook = accountBookRepository.findById(request.getAccountBookId())
+                    .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
+
+            // 사용자가 해당 장부의 멤버인지 확인
+            boolean isMember = accountBook.getMembers().stream()
+                    .anyMatch(member -> member.getUser().getUserId().equals(userId));
+
+            if (!isMember) {
+                throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+            }
+        }
 
         // 카테고리가 없으면 자동 분류
         String category = request.getCategory();
@@ -49,6 +67,8 @@ public class ExpenseService {
         Expense expense = Expense.builder()
                 .user(user)
                 .coupleId(request.getCoupleId())
+                .accountBook(accountBook)
+                .fundingSource(request.getFundingSource())
                 .amount(request.getAmount())
                 .date(request.getDate())
                 .category(category)
@@ -60,7 +80,8 @@ public class ExpenseService {
                 .build();
 
         Expense savedExpense = expenseRepository.save(expense);
-        log.info("Created expense: {}", savedExpense.getExpenseId());
+        log.info("Created expense: {} linked to account book: {}", savedExpense.getExpenseId(),
+                accountBook != null ? accountBook.getAccountBookId() : "none");
 
         return toResponse(savedExpense);
     }
@@ -170,6 +191,8 @@ public class ExpenseService {
                 .expenseId(expense.getExpenseId())
                 .userId(expense.getUser().getUserId())
                 .coupleId(expense.getCoupleId())
+                .accountBookId(expense.getAccountBook() != null ? expense.getAccountBook().getAccountBookId() : null)
+                .fundingSource(expense.getFundingSource() != null ? expense.getFundingSource().name() : null)
                 .amount(expense.getAmount())
                 .date(expense.getDate())
                 .category(expense.getCategory())

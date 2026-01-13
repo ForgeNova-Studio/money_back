@@ -33,8 +33,19 @@ public class RecurringExpense {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    /**
+     * @deprecated accountBookId를 사용하세요.
+     */
+    @Deprecated
     @Column(name = "couple_id")
     private UUID coupleId;
+
+    /**
+     * 소속 장부 (여행, 생활비 등)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_book_id")
+    private com.moneyflow.domain.accountbook.AccountBook accountBook;
 
     // 기본 정보
     @Column(nullable = false, length = 100)
@@ -130,6 +141,7 @@ public class RecurringExpense {
 
     /**
      * 금액 변동 감지
+     * 
      * @return 금액이 변경되었으면 true
      */
     public boolean hasAmountChanged() {
@@ -141,6 +153,7 @@ public class RecurringExpense {
 
     /**
      * 종료 여부 확인
+     * 
      * @return 종료일이 지났으면 true
      */
     public boolean isExpired() {

@@ -28,9 +28,20 @@ public class IncomeResponse {
     private UUID userId;
 
     /**
-     * 커플 ID (커플 모드인 경우)
+     * @deprecated accountBookId를 사용하세요.
      */
+    @Deprecated
     private UUID coupleId;
+
+    /**
+     * 소속 장부 ID
+     */
+    private UUID accountBookId;
+
+    /**
+     * 수입 출처 유형
+     */
+    private String fundingSource;
 
     /**
      * 수입 금액

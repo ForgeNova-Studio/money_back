@@ -29,8 +29,28 @@ public class Expense {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    /**
+     * @deprecated accountBookId를 사용하세요.
+     *             이 필드는 하위 호환성을 위해 유지되며, 향후 제거될 예정입니다.
+     */
+    @Deprecated
     @Column(name = "couple_id")
     private UUID coupleId;
+
+    /**
+     * 소속 장부 (여행, 생활비 등)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_book_id")
+    private com.moneyflow.domain.accountbook.AccountBook accountBook;
+
+    /**
+     * 지출 출처 (개인 vs 공금)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "funding_source", length = 20)
+    @Builder.Default
+    private com.moneyflow.domain.accountbook.FundingSource fundingSource = com.moneyflow.domain.accountbook.FundingSource.PERSONAL;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;

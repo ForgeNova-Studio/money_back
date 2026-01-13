@@ -35,7 +35,21 @@ public class ExpenseRequest {
 
     private String imageUrl;
 
+    /**
+     * @deprecated accountBookId를 사용하세요.
+     */
+    @Deprecated
     private UUID coupleId;
+
+    /**
+     * 소속 장부 ID
+     */
+    private UUID accountBookId;
+
+    /**
+     * 지출 출처 (PERSONAL: 개인, SHARED_POOL: 공금)
+     */
+    private com.moneyflow.domain.accountbook.FundingSource fundingSource;
 
     private Boolean isAutoCategorized;
 }

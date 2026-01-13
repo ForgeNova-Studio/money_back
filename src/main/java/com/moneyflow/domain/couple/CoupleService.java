@@ -1,5 +1,6 @@
 package com.moneyflow.domain.couple;
 
+import com.moneyflow.domain.accountbook.*;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.JoinCoupleRequest;
@@ -29,6 +30,8 @@ public class CoupleService {
 
     private final CoupleRepository coupleRepository;
     private final UserRepository userRepository;
+    private final AccountBookRepository accountBookRepository;
+    private final AccountBookMemberRepository accountBookMemberRepository;
 
     private static final String INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int INVITE_CODE_LENGTH = 6;
@@ -136,6 +139,9 @@ public class CoupleService {
 
         coupleRepository.save(couple);
 
+        // 기본 생활비 장부 자동 생성
+        createDefaultAccountBook(couple);
+
         log.info("커플 가입 완료: userId={}, coupleId={}", userId, couple.getCoupleId());
 
         return toCoupleResponse(couple);
@@ -224,5 +230,48 @@ public class CoupleService {
                 .linkedAt(couple.getLinkedAt())
                 .createdAt(couple.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * 커플 연동 시 기본 생활비 장부 자동 생성
+     */
+    private void createDefaultAccountBook(Couple couple) {
+        User user1 = couple.getUser1();
+        User user2 = couple.getUser2();
+
+        // 기본 생활비 장부 생성
+        AccountBook accountBook = AccountBook.builder()
+                .name("우리의 생활비")
+                .bookType(BookType.COUPLE_LIVING)
+                .couple(couple)
+                .memberCount(2)
+                .description("커플 공동 생활비 장부")
+                .createdBy(user1)
+                .build();
+
+        accountBook = accountBookRepository.save(accountBook);
+
+        // user1을 OWNER로 추가
+        AccountBookMember member1 = AccountBookMember.builder()
+                .id(new AccountBookMemberId(accountBook.getAccountBookId(), user1.getUserId()))
+                .accountBook(accountBook)
+                .user(user1)
+                .role(MemberRole.OWNER)
+                .joinedAt(LocalDateTime.now())
+                .build();
+        accountBookMemberRepository.save(member1);
+
+        // user2를 MEMBER로 추가
+        AccountBookMember member2 = AccountBookMember.builder()
+                .id(new AccountBookMemberId(accountBook.getAccountBookId(), user2.getUserId()))
+                .accountBook(accountBook)
+                .user(user2)
+                .role(MemberRole.MEMBER)
+                .joinedAt(LocalDateTime.now())
+                .build();
+        accountBookMemberRepository.save(member2);
+
+        log.info("기본 생활비 장부 생성 완료: coupleId={}, accountBookId={}",
+                couple.getCoupleId(), accountBook.getAccountBookId());
     }
 }

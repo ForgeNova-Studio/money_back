@@ -65,6 +65,24 @@ public class Couple {
     private LocalDateTime linkedAt;
 
     /**
+     * 사귄 날짜 / 기념일
+     */
+    @Column(name = "anniversary")
+    private java.time.LocalDate anniversary;
+
+    /**
+     * user1의 애칭
+     */
+    @Column(name = "nickname1", length = 50)
+    private String nickname1;
+
+    /**
+     * user2의 애칭
+     */
+    @Column(name = "nickname2", length = 50)
+    private String nickname2;
+
+    /**
      * 생성 시간
      */
     @Column(name = "created_at", updatable = false)

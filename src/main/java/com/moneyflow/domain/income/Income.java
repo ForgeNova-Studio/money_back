@@ -46,11 +46,27 @@ public class Income {
     private User user;
 
     /**
-     * 커플 ID (커플 모드인 경우)
-     * NULL이면 개인 수입
+     * @deprecated accountBookId를 사용하세요.
+     *             이 필드는 하위 호환성을 위해 유지되며, 향후 제거될 예정입니다.
      */
+    @Deprecated
     @Column(name = "couple_id")
     private UUID coupleId;
+
+    /**
+     * 소속 장부 (여행, 생활비 등)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_book_id")
+    private com.moneyflow.domain.accountbook.AccountBook accountBook;
+
+    /**
+     * 수입 출처 유형 (개인 vs 공금)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "funding_source", length = 20)
+    @Builder.Default
+    private com.moneyflow.domain.accountbook.FundingSource fundingSource = com.moneyflow.domain.accountbook.FundingSource.PERSONAL;
 
     /**
      * 수입 금액
