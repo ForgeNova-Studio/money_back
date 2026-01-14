@@ -4,8 +4,10 @@ import com.moneyflow.domain.expense.Expense;
 import com.moneyflow.domain.expense.ExpenseRepository;
 import com.moneyflow.domain.income.Income;
 import com.moneyflow.domain.income.IncomeRepository;
+import com.moneyflow.domain.accountbook.AccountBookMemberRepository;
 import com.moneyflow.dto.response.DailySummaryDto;
 import com.moneyflow.dto.response.TransactionDto;
+import com.moneyflow.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,17 +21,27 @@ public class HomeService {
 
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
+    private final AccountBookMemberRepository accountBookMemberRepository;
 
-    public Map<String, DailySummaryDto> getMonthlyData(UUID userId, int year, int month) {
+    public Map<String, DailySummaryDto> getMonthlyData(
+            UUID userId,
+            UUID accountBookId,
+            int year,
+            int month) {
         // 1. 해당 월의 시작일과 종료일 계산
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
+        if (!accountBookMemberRepository
+                .existsByAccountBookAccountBookIdAndUserUserId(accountBookId, userId)) {
+            throw new UnauthorizedException("장부의 멤버만 조회할 수 있습니다");
+        }
+
         // 2. 한 달 치 데이터 한 번에 조회 (DB 쿼리 2회)
-        List<Expense> allExpenses = expenseRepository.findByUser_UserIdAndDateBetween(
-                userId, startDate, endDate);
-        List<Income> allIncomes = incomeRepository.findByUser_UserIdAndDateBetween(
-                userId, startDate, endDate);
+        List<Expense> allExpenses = expenseRepository.findByAccountBookAndDateRange(
+                accountBookId, startDate, endDate, null);
+        List<Income> allIncomes = incomeRepository.findByAccountBookAndDateRange(
+                accountBookId, startDate, endDate, null);
 
         // 3. 날짜별로 데이터 그룹화
         Map<LocalDate, List<Expense>> expensesByDate = allExpenses.stream()
