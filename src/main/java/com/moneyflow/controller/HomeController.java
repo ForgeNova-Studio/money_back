@@ -32,7 +32,8 @@ public class HomeController {
     @GetMapping("/monthly-data")
     public ResponseEntity<Map<String, DailySummaryDto>> getMonthlyData(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam String yearMonth // "2025-12"
+            @RequestParam String yearMonth, // "2025-12"
+            @RequestParam UUID accountBookId
     ) {
         UUID userId = UUID.fromString(userDetails.getUsername());
         // yearMonth 파싱 (예: "2025-12" → year=2025, month=12)
@@ -40,7 +41,8 @@ public class HomeController {
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);
 
-        Map<String, DailySummaryDto> data = homeService.getMonthlyData(userId, year, month);
+        Map<String, DailySummaryDto> data =
+                homeService.getMonthlyData(userId, accountBookId, year, month);
         return ResponseEntity.ok(data);
     }
 }
