@@ -1,5 +1,7 @@
 package com.moneyflow.domain.income;
 
+import com.moneyflow.domain.accountbook.AccountBook;
+import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.IncomeRequest;
@@ -30,6 +32,7 @@ public class IncomeService {
 
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
+    private final AccountBookRepository accountBookRepository;
 
     /**
      * 수입 생성
@@ -43,9 +46,24 @@ public class IncomeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
 
+        AccountBook accountBook = null;
+        if (request.getAccountBookId() != null) {
+            accountBook = accountBookRepository.findById(request.getAccountBookId())
+                    .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
+
+            boolean isMember = accountBook.getMembers().stream()
+                    .anyMatch(member -> member.getUser().getUserId().equals(userId));
+
+            if (!isMember) {
+                throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+            }
+        }
+
         Income income = Income.builder()
                 .user(user)
                 .coupleId(request.getCoupleId())
+                .accountBook(accountBook)
+                .fundingSource(request.getFundingSource())
                 .amount(request.getAmount())
                 .date(request.getDate())
                 .source(request.getSource())
@@ -180,6 +198,12 @@ public class IncomeService {
                 .incomeId(income.getIncomeId())
                 .userId(income.getUser().getUserId())
                 .coupleId(income.getCoupleId())
+                .accountBookId(income.getAccountBook() != null
+                        ? income.getAccountBook().getAccountBookId()
+                        : null)
+                .fundingSource(income.getFundingSource() != null
+                        ? income.getFundingSource().name()
+                        : null)
                 .amount(income.getAmount())
                 .date(income.getDate())
                 .source(income.getSource())
