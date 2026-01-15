@@ -99,6 +99,38 @@ public class AccountBookService {
     }
 
     /**
+     * 신규 사용자 기본 장부 생성
+     */
+    @Transactional
+    public void createDefaultAccountBookIfMissing(User user) {
+        UUID userId = user.getUserId();
+        if (accountBookRepository.existsByMemberUserIdAndBookType(userId, BookType.DEFAULT)) {
+            log.info("기본 장부가 이미 존재합니다: userId={}", userId);
+            return;
+        }
+
+        AccountBook accountBook = AccountBook.builder()
+                .name("내 가계부")
+                .bookType(BookType.DEFAULT)
+                .memberCount(1)
+                .description("기본 가계부")
+                .createdBy(user)
+                .build();
+
+        accountBook = accountBookRepository.save(accountBook);
+
+        AccountBookMember ownerMember = AccountBookMember.builder()
+                .id(new AccountBookMemberId(accountBook.getAccountBookId(), userId))
+                .accountBook(accountBook)
+                .user(user)
+                .role(MemberRole.OWNER)
+                .build();
+        accountBookMemberRepository.save(ownerMember);
+
+        log.info("기본 장부 생성 완료: accountBookId={}, userId={}", accountBook.getAccountBookId(), userId);
+    }
+
+    /**
      * 내 장부 목록 조회
      */
     @Transactional(readOnly = true)

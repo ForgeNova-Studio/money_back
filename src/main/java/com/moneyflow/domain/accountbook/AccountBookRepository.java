@@ -51,6 +51,16 @@ public interface AccountBookRepository extends JpaRepository<AccountBook, UUID> 
     boolean existsByCouple_CoupleIdAndBookType(UUID coupleId, BookType bookType);
 
     /**
+     * 사용자별 특정 유형 장부 존재 확인
+     */
+    @Query("SELECT COUNT(ab) > 0 FROM AccountBook ab " +
+            "JOIN ab.members m " +
+            "WHERE m.user.userId = :userId AND ab.bookType = :bookType")
+    boolean existsByMemberUserIdAndBookType(
+            @Param("userId") UUID userId,
+            @Param("bookType") BookType bookType);
+
+    /**
      * 장부 ID와 멤버 확인 (권한 체크용)
      */
     @Query("SELECT ab FROM AccountBook ab " +

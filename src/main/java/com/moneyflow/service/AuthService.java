@@ -1,5 +1,6 @@
 package com.moneyflow.service;
 
+import com.moneyflow.domain.accountbook.AccountBookService;
 import com.moneyflow.domain.token.RefreshToken;
 import com.moneyflow.domain.token.RefreshTokenRepository;
 import com.moneyflow.domain.user.AuthProvider;
@@ -59,6 +60,7 @@ public class AuthService {
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailService emailService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AccountBookService accountBookService;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -89,6 +91,8 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
+
+        accountBookService.createDefaultAccountBookIfMissing(user);
 
         // 사용한 인증 정보 삭제 (재사용 방지)
         emailVerificationRepository.delete(verification);
@@ -222,6 +226,7 @@ public class AuthService {
                         .build();
 
                 user = userRepository.save(user);
+                accountBookService.createDefaultAccountBookIfMissing(user);
                 log.info("소셜 로그인으로 새로운 사용자 등록: {} ({})", email, request.getProvider());
             } else {
                 log.info("소셜 로그인: {} ({})", email, request.getProvider());
@@ -287,6 +292,7 @@ public class AuthService {
                     .build();
 
             user = userRepository.save(user);
+            accountBookService.createDefaultAccountBookIfMissing(user);
             log.info("Mock 소셜 로그인으로 새로운 사용자 등록: {} ({})", email, request.getProvider());
         }
 
