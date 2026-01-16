@@ -37,22 +37,6 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         @Param("source") String source);
 
         /**
-         * 커플별 기간별 수입 조회
-         * 
-         * @deprecated accountBookId 기반 쿼리를 사용하세요: findByAccountBookAndDateRange
-         */
-        @Deprecated
-        @Query("SELECT i FROM Income i WHERE i.coupleId = :coupleId " +
-                        "AND i.date BETWEEN :startDate AND :endDate " +
-                        "AND (:source IS NULL OR i.source = :source) " +
-                        "ORDER BY i.date DESC, i.createdAt DESC")
-        List<Income> findIncomesByCoupleAndDateRange(
-                        @Param("coupleId") UUID coupleId,
-                        @Param("startDate") LocalDate startDate,
-                        @Param("endDate") LocalDate endDate,
-                        @Param("source") String source);
-
-        /**
          * 장부별 기간별 수입 조회
          */
         @Query("SELECT i FROM Income i WHERE i.accountBook.accountBookId = :accountBookId " +

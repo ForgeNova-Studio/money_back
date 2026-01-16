@@ -23,21 +23,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
                         @Param("endDate") LocalDate endDate,
                         @Param("category") String category);
 
-        // 커플별 기간별 지출 조회
-        /**
-         * @deprecated accountBookId 기반 쿼리를 사용하세요: findByAccountBookAndDateRange
-         */
-        @Deprecated
-        @Query("SELECT e FROM Expense e WHERE e.coupleId = :coupleId " +
-                        "AND e.date BETWEEN :startDate AND :endDate " +
-                        "AND (:category IS NULL OR e.category = :category) " +
-                        "ORDER BY e.date DESC, e.createdAt DESC")
-        List<Expense> findExpensesByCoupleAndDateRange(
-                        @Param("coupleId") UUID coupleId,
-                        @Param("startDate") LocalDate startDate,
-                        @Param("endDate") LocalDate endDate,
-                        @Param("category") String category);
-
         // 장부별 기간별 지출 조회
         @Query("SELECT e FROM Expense e WHERE e.accountBook.accountBookId = :accountBookId " +
                         "AND e.date BETWEEN :startDate AND :endDate " +
