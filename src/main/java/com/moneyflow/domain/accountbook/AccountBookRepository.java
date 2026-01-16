@@ -15,58 +15,67 @@ import java.util.UUID;
 @Repository
 public interface AccountBookRepository extends JpaRepository<AccountBook, UUID> {
 
-    /**
-     * 사용자가 참여 중인 장부 목록 조회
-     */
-    @Query("SELECT ab FROM AccountBook ab " +
-            "JOIN ab.members m " +
-            "WHERE m.user.userId = :userId AND ab.isActive = true " +
-            "ORDER BY ab.createdAt DESC")
-    List<AccountBook> findByMemberUserId(@Param("userId") UUID userId);
+        /**
+         * 사용자가 참여 중인 장부 목록 조회
+         */
+        @Query("SELECT ab FROM AccountBook ab " +
+                        "JOIN ab.members m " +
+                        "WHERE m.user.userId = :userId AND ab.isActive = true " +
+                        "ORDER BY ab.createdAt DESC")
+        List<AccountBook> findByMemberUserId(@Param("userId") UUID userId);
 
-    /**
-     * 사용자가 참여 중인 활성 장부 목록 (유형별)
-     */
-    @Query("SELECT ab FROM AccountBook ab " +
-            "JOIN ab.members m " +
-            "WHERE m.user.userId = :userId AND ab.isActive = true AND ab.bookType = :bookType " +
-            "ORDER BY ab.createdAt DESC")
-    List<AccountBook> findByMemberUserIdAndBookType(
-            @Param("userId") UUID userId,
-            @Param("bookType") BookType bookType);
+        /**
+         * 사용자가 참여 중인 활성 장부 목록 (유형별)
+         */
+        @Query("SELECT ab FROM AccountBook ab " +
+                        "JOIN ab.members m " +
+                        "WHERE m.user.userId = :userId AND ab.isActive = true AND ab.bookType = :bookType " +
+                        "ORDER BY ab.createdAt DESC")
+        List<AccountBook> findByMemberUserIdAndBookType(
+                        @Param("userId") UUID userId,
+                        @Param("bookType") BookType bookType);
 
-    /**
-     * 커플의 장부 목록 조회
-     */
-    List<AccountBook> findByCouple_CoupleIdAndIsActiveTrue(UUID coupleId);
+        /**
+         * 커플의 장부 목록 조회
+         */
+        List<AccountBook> findByCouple_CoupleIdAndIsActiveTrue(UUID coupleId);
 
-    /**
-     * 커플의 특정 유형 장부 조회
-     */
-    Optional<AccountBook> findByCouple_CoupleIdAndBookTypeAndIsActiveTrue(UUID coupleId, BookType bookType);
+        /**
+         * 커플의 특정 유형 장부 조회
+         */
+        Optional<AccountBook> findByCouple_CoupleIdAndBookTypeAndIsActiveTrue(UUID coupleId, BookType bookType);
 
-    /**
-     * 커플 ID로 장부 존재 확인
-     */
-    boolean existsByCouple_CoupleIdAndBookType(UUID coupleId, BookType bookType);
+        /**
+         * 커플 ID로 장부 존재 확인
+         */
+        boolean existsByCouple_CoupleIdAndBookType(UUID coupleId, BookType bookType);
 
-    /**
-     * 사용자별 특정 유형 장부 존재 확인
-     */
-    @Query("SELECT COUNT(ab) > 0 FROM AccountBook ab " +
-            "JOIN ab.members m " +
-            "WHERE m.user.userId = :userId AND ab.bookType = :bookType")
-    boolean existsByMemberUserIdAndBookType(
-            @Param("userId") UUID userId,
-            @Param("bookType") BookType bookType);
+        /**
+         * 사용자별 특정 유형 장부 존재 확인
+         */
+        @Query("SELECT COUNT(ab) > 0 FROM AccountBook ab " +
+                        "JOIN ab.members m " +
+                        "WHERE m.user.userId = :userId AND ab.bookType = :bookType")
+        boolean existsByMemberUserIdAndBookType(
+                        @Param("userId") UUID userId,
+                        @Param("bookType") BookType bookType);
 
-    /**
-     * 장부 ID와 멤버 확인 (권한 체크용)
-     */
-    @Query("SELECT ab FROM AccountBook ab " +
-            "JOIN ab.members m " +
-            "WHERE ab.accountBookId = :accountBookId AND m.user.userId = :userId")
-    Optional<AccountBook> findByIdAndMemberUserId(
-            @Param("accountBookId") UUID accountBookId,
-            @Param("userId") UUID userId);
+        /**
+         * 사용자의 기본 장부 조회 (DEFAULT 타입)
+         */
+        @Query("SELECT ab FROM AccountBook ab " +
+                        "JOIN ab.members m " +
+                        "WHERE m.user.userId = :userId AND ab.bookType = 'DEFAULT' AND ab.isActive = true " +
+                        "ORDER BY ab.createdAt ASC")
+        Optional<AccountBook> findDefaultAccountBookByUserId(@Param("userId") UUID userId);
+
+        /**
+         * 장부 ID와 멤버 확인 (권한 체크용)
+         */
+        @Query("SELECT ab FROM AccountBook ab " +
+                        "JOIN ab.members m " +
+                        "WHERE ab.accountBookId = :accountBookId AND m.user.userId = :userId")
+        Optional<AccountBook> findByIdAndMemberUserId(
+                        @Param("accountBookId") UUID accountBookId,
+                        @Param("userId") UUID userId);
 }

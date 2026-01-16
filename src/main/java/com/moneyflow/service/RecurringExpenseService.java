@@ -1,7 +1,7 @@
 package com.moneyflow.service;
 
-import com.moneyflow.domain.couple.Couple;
-import com.moneyflow.domain.couple.CoupleRepository;
+import com.moneyflow.domain.accountbook.AccountBook;
+import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.recurringexpense.RecurringExpense;
 import com.moneyflow.domain.recurringexpense.RecurringExpenseRepository;
 import com.moneyflow.domain.user.User;
@@ -10,6 +10,8 @@ import com.moneyflow.dto.request.CreateRecurringExpenseRequest;
 import com.moneyflow.dto.request.UpdateRecurringExpenseRequest;
 import com.moneyflow.dto.response.MonthlyRecurringTotalResponse;
 import com.moneyflow.dto.response.RecurringExpenseResponse;
+import com.moneyflow.exception.ResourceNotFoundException;
+import com.moneyflow.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,28 +33,36 @@ public class RecurringExpenseService {
 
     private final RecurringExpenseRepository recurringExpenseRepository;
     private final UserRepository userRepository;
-    private final CoupleRepository coupleRepository;
-
-    /**
-     * 사용자의 커플 ID 조회 (있으면 반환, 없으면 null)
-     */
-    private UUID getUserCoupleId(UUID userId) {
-        return coupleRepository.findByUserId(userId)
-                .map(Couple::getCoupleId)
-                .orElse(null);
-    }
+    private final AccountBookRepository accountBookRepository;
 
     /**
      * 고정비 등록
+     * accountBookId 필수 (새로 생성하는 고정비는 장부에 연결되어야 함)
      */
     @Transactional
     public RecurringExpenseResponse createRecurringExpense(UUID userId, CreateRecurringExpenseRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
+
+        // 장부 검증 (필수)
+        if (request.getAccountBookId() == null) {
+            throw new IllegalArgumentException("장부 ID는 필수입니다");
+        }
+
+        AccountBook accountBook = accountBookRepository.findById(request.getAccountBookId())
+                .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
+
+        // 사용자가 해당 장부의 멤버인지 확인
+        boolean isMember = accountBook.getMembers().stream()
+                .anyMatch(member -> member.getUser().getUserId().equals(userId));
+
+        if (!isMember) {
+            throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+        }
 
         RecurringExpense recurringExpense = RecurringExpense.builder()
                 .user(user)
-                .coupleId(getUserCoupleId(userId))
+                .accountBook(accountBook)
                 .name(request.getName())
                 .amount(request.getAmount())
                 .category(request.getCategory())
@@ -71,7 +80,7 @@ public class RecurringExpenseService {
                 .build();
 
         RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
-        log.info("고정비 등록 완료: {}, 사용자: {}", saved.getName(), userId);
+        log.info("고정비 등록 완료: {}, 사용자: {}, 장부: {}", saved.getName(), userId, accountBook.getAccountBookId());
 
         return toResponse(saved);
     }
@@ -80,16 +89,15 @@ public class RecurringExpenseService {
      * 고정비 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<RecurringExpenseResponse> getRecurringExpenses(UUID userId, Boolean includeCouple) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+    public List<RecurringExpenseResponse> getRecurringExpenses(UUID userId, Boolean includeShared) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
         List<RecurringExpense> expenses;
 
-        UUID coupleId = getUserCoupleId(userId);
-        if (Boolean.TRUE.equals(includeCouple) && coupleId != null) {
-            // 커플 모드: 내 고정비 + 커플 고정비
-            expenses = recurringExpenseRepository.findByUserIdOrCoupleId(userId, coupleId);
+        if (Boolean.TRUE.equals(includeShared)) {
+            // 공유 모드: 내 고정비 + 내가 멤버인 장부의 고정비
+            expenses = recurringExpenseRepository.findByUserOrSharedAccountBooks(userId);
         } else {
             // 개인 모드: 내 고정비만
             expenses = recurringExpenseRepository.findByUser_UserId(userId);
@@ -104,15 +112,14 @@ public class RecurringExpenseService {
      * 활성 고정비 목록 조회 (종료되지 않은 항목만)
      */
     @Transactional(readOnly = true)
-    public List<RecurringExpenseResponse> getActiveRecurringExpenses(UUID userId, Boolean includeCouple) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+    public List<RecurringExpenseResponse> getActiveRecurringExpenses(UUID userId, Boolean includeShared) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
         List<RecurringExpense> expenses;
 
-        UUID coupleId = getUserCoupleId(userId);
-        if (Boolean.TRUE.equals(includeCouple) && coupleId != null) {
-            expenses = recurringExpenseRepository.findActiveRecurringExpensesWithCouple(userId, coupleId);
+        if (Boolean.TRUE.equals(includeShared)) {
+            expenses = recurringExpenseRepository.findActiveRecurringExpensesWithSharedBooks(userId);
         } else {
             expenses = recurringExpenseRepository.findActiveRecurringExpenses(userId);
         }
@@ -139,19 +146,17 @@ public class RecurringExpenseService {
      * 다가오는 결제 조회 (N일 이내)
      */
     @Transactional(readOnly = true)
-    public List<RecurringExpenseResponse> getUpcomingPayments(UUID userId, Integer daysAhead, Boolean includeCouple) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+    public List<RecurringExpenseResponse> getUpcomingPayments(UUID userId, Integer daysAhead, Boolean includeShared) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
         LocalDate today = LocalDate.now();
         LocalDate endDate = today.plusDays(daysAhead != null ? daysAhead : 7);
 
         List<RecurringExpense> expenses;
 
-        UUID coupleId = getUserCoupleId(userId);
-        if (Boolean.TRUE.equals(includeCouple) && coupleId != null) {
-            expenses = recurringExpenseRepository.findUpcomingPaymentsWithCouple(
-                    userId, coupleId, today, endDate);
+        if (Boolean.TRUE.equals(includeShared)) {
+            expenses = recurringExpenseRepository.findUpcomingPaymentsWithSharedBooks(userId, today, endDate);
         } else {
             expenses = recurringExpenseRepository.findUpcomingPayments(userId, today, endDate);
         }
@@ -167,19 +172,16 @@ public class RecurringExpenseService {
     @Transactional(readOnly = true)
     public RecurringExpenseResponse getRecurringExpense(UUID userId, UUID recurringExpenseId) {
         RecurringExpense expense = recurringExpenseRepository.findById(recurringExpenseId)
-                .orElseThrow(() -> new IllegalArgumentException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
+                .orElseThrow(() -> new ResourceNotFoundException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
 
-        // 권한 확인: 본인의 고정비이거나, 커플 고정비여야 함
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
-
-        UUID coupleId = getUserCoupleId(userId);
+        // 권한 확인: 본인의 고정비이거나, 해당 장부의 멤버여야 함
         boolean isOwner = expense.getUser().getUserId().equals(userId);
-        boolean isCoupleExpense = expense.getCoupleId() != null &&
-                expense.getCoupleId().equals(coupleId);
+        boolean isAccountBookMember = expense.getAccountBook() != null &&
+                expense.getAccountBook().getMembers().stream()
+                        .anyMatch(m -> m.getUser().getUserId().equals(userId));
 
-        if (!isOwner && !isCoupleExpense) {
-            throw new IllegalArgumentException("해당 고정비에 접근할 권한이 없습니다");
+        if (!isOwner && !isAccountBookMember) {
+            throw new UnauthorizedException("해당 고정비에 접근할 권한이 없습니다");
         }
 
         return toResponse(expense);
@@ -193,11 +195,11 @@ public class RecurringExpenseService {
             UUID userId, UUID recurringExpenseId, UpdateRecurringExpenseRequest request) {
 
         RecurringExpense expense = recurringExpenseRepository.findById(recurringExpenseId)
-                .orElseThrow(() -> new IllegalArgumentException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
+                .orElseThrow(() -> new ResourceNotFoundException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
 
         // 권한 확인: 본인의 고정비만 수정 가능
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("해당 고정비를 수정할 권한이 없습니다");
+            throw new UnauthorizedException("해당 고정비를 수정할 권한이 없습니다");
         }
 
         // 금액이 변경되면 이전 금액 저장
@@ -207,18 +209,30 @@ public class RecurringExpenseService {
         }
 
         // 필드 업데이트 (null이 아닌 값만)
-        if (request.getName() != null) expense.setName(request.getName());
-        if (request.getCategory() != null) expense.setCategory(request.getCategory());
-        if (request.getDescription() != null) expense.setDescription(request.getDescription());
-        if (request.getRecurringType() != null) expense.setRecurringType(request.getRecurringType());
-        if (request.getStartDate() != null) expense.setStartDate(request.getStartDate());
-        if (request.getEndDate() != null) expense.setEndDate(request.getEndDate());
-        if (request.getDayOfMonth() != null) expense.setDayOfMonth(request.getDayOfMonth());
-        if (request.getDayOfWeek() != null) expense.setDayOfWeek(request.getDayOfWeek());
-        if (request.getNextPaymentDate() != null) expense.setNextPaymentDate(request.getNextPaymentDate());
-        if (request.getIsSubscription() != null) expense.setIsSubscription(request.getIsSubscription());
-        if (request.getSubscriptionProvider() != null) expense.setSubscriptionProvider(request.getSubscriptionProvider());
-        if (request.getNotificationEnabled() != null) expense.setNotificationEnabled(request.getNotificationEnabled());
+        if (request.getName() != null)
+            expense.setName(request.getName());
+        if (request.getCategory() != null)
+            expense.setCategory(request.getCategory());
+        if (request.getDescription() != null)
+            expense.setDescription(request.getDescription());
+        if (request.getRecurringType() != null)
+            expense.setRecurringType(request.getRecurringType());
+        if (request.getStartDate() != null)
+            expense.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null)
+            expense.setEndDate(request.getEndDate());
+        if (request.getDayOfMonth() != null)
+            expense.setDayOfMonth(request.getDayOfMonth());
+        if (request.getDayOfWeek() != null)
+            expense.setDayOfWeek(request.getDayOfWeek());
+        if (request.getNextPaymentDate() != null)
+            expense.setNextPaymentDate(request.getNextPaymentDate());
+        if (request.getIsSubscription() != null)
+            expense.setIsSubscription(request.getIsSubscription());
+        if (request.getSubscriptionProvider() != null)
+            expense.setSubscriptionProvider(request.getSubscriptionProvider());
+        if (request.getNotificationEnabled() != null)
+            expense.setNotificationEnabled(request.getNotificationEnabled());
 
         RecurringExpense updated = recurringExpenseRepository.save(expense);
         log.info("고정비 수정 완료: {}, 사용자: {}", updated.getName(), userId);
@@ -232,11 +246,11 @@ public class RecurringExpenseService {
     @Transactional
     public void deleteRecurringExpense(UUID userId, UUID recurringExpenseId) {
         RecurringExpense expense = recurringExpenseRepository.findById(recurringExpenseId)
-                .orElseThrow(() -> new IllegalArgumentException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
+                .orElseThrow(() -> new ResourceNotFoundException("고정비를 찾을 수 없습니다: " + recurringExpenseId));
 
         // 권한 확인: 본인의 고정비만 삭제 가능
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("해당 고정비를 삭제할 권한이 없습니다");
+            throw new UnauthorizedException("해당 고정비를 삭제할 권한이 없습니다");
         }
 
         recurringExpenseRepository.delete(expense);
@@ -247,19 +261,18 @@ public class RecurringExpenseService {
      * 월간 고정비 총액 조회
      */
     @Transactional(readOnly = true)
-    public MonthlyRecurringTotalResponse getMonthlyTotal(UUID userId, Boolean includeCouple) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+    public MonthlyRecurringTotalResponse getMonthlyTotal(UUID userId, Boolean includeShared) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
         BigDecimal total;
         int count;
 
-        UUID coupleId = getUserCoupleId(userId);
-        if (Boolean.TRUE.equals(includeCouple) && coupleId != null) {
-            // 커플 모드
-            total = recurringExpenseRepository.calculateMonthlyTotalWithCouple(userId, coupleId);
+        if (Boolean.TRUE.equals(includeShared)) {
+            // 공유 모드
+            total = recurringExpenseRepository.calculateMonthlyTotalWithSharedBooks(userId);
             List<RecurringExpense> expenses = recurringExpenseRepository
-                    .findActiveRecurringExpensesWithCouple(userId, coupleId);
+                    .findActiveRecurringExpensesWithSharedBooks(userId);
             count = (int) expenses.stream()
                     .filter(e -> "MONTHLY".equals(e.getRecurringType().name()))
                     .count();
@@ -275,7 +288,7 @@ public class RecurringExpenseService {
         return MonthlyRecurringTotalResponse.builder()
                 .monthlyTotal(total)
                 .count(count)
-                .isCoupleMode(Boolean.TRUE.equals(includeCouple) && coupleId != null)
+                .isCoupleMode(Boolean.TRUE.equals(includeShared))
                 .build();
     }
 
@@ -300,10 +313,17 @@ public class RecurringExpenseService {
      * Entity → Response DTO 변환
      */
     private RecurringExpenseResponse toResponse(RecurringExpense expense) {
+        // accountBook에서 coupleId 추출 (deprecated 필드 대체)
+        UUID coupleId = null;
+        if (expense.getAccountBook() != null && expense.getAccountBook().getCouple() != null) {
+            coupleId = expense.getAccountBook().getCouple().getCoupleId();
+        }
+
         return RecurringExpenseResponse.builder()
                 .recurringExpenseId(expense.getRecurringExpenseId())
                 .userId(expense.getUser().getUserId())
-                .coupleId(expense.getCoupleId())
+                .coupleId(coupleId)
+                .accountBookId(expense.getAccountBook() != null ? expense.getAccountBook().getAccountBookId() : null)
                 .name(expense.getName())
                 .amount(expense.getAmount())
                 .category(expense.getCategory())

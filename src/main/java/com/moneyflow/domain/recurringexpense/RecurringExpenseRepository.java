@@ -17,113 +17,165 @@ import java.util.UUID;
 @Repository
 public interface RecurringExpenseRepository extends JpaRepository<RecurringExpense, UUID> {
 
-    /**
-     * 사용자의 모든 고정비 조회
-     */
-    List<RecurringExpense> findByUser_UserId(UUID userId);
+        /**
+         * 사용자의 모든 고정비 조회
+         */
+        List<RecurringExpense> findByUser_UserId(UUID userId);
 
-    /**
-     * 커플의 모든 고정비 조회
-     */
-    List<RecurringExpense> findByCoupleId(UUID coupleId);
+        /**
+         * 장부별 고정비 조회
+         */
+        List<RecurringExpense> findByAccountBook_AccountBookId(UUID accountBookId);
 
-    /**
-     * 사용자의 모든 고정비 조회 (커플 고정비 포함)
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId OR r.coupleId = :coupleId")
-    List<RecurringExpense> findByUserIdOrCoupleId(@Param("userId") UUID userId, @Param("coupleId") UUID coupleId);
+        /**
+         * 사용자가 멤버인 모든 장부의 고정비 + 개인 고정비(장부 없음) 조회
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+                        "OR r.accountBook.accountBookId IN (" +
+                        "  SELECT m.accountBook.accountBookId FROM AccountBookMember m WHERE m.user.userId = :userId)")
+        List<RecurringExpense> findByUserOrSharedAccountBooks(@Param("userId") UUID userId);
 
-    /**
-     * 구독료만 조회
-     */
-    List<RecurringExpense> findByUser_UserIdAndIsSubscription(UUID userId, Boolean isSubscription);
+        /**
+         * 활성 고정비 조회 (종료되지 않은 것, 공유 장부 포함)
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE " +
+                        "(r.user.userId = :userId OR r.accountBook.accountBookId IN (" +
+                        "  SELECT m.accountBook.accountBookId FROM AccountBookMember m WHERE m.user.userId = :userId)) "
+                        +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        List<RecurringExpense> findActiveRecurringExpensesWithSharedBooks(@Param("userId") UUID userId);
 
-    /**
-     * 특정 기간 내 결제 예정인 고정비 조회
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
-            "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
-            "ORDER BY r.nextPaymentDate ASC")
-    List<RecurringExpense> findUpcomingPayments(
-            @Param("userId") UUID userId,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
-    );
+        /**
+         * 다가오는 결제 조회 (공유 장부 포함)
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE " +
+                        "(r.user.userId = :userId OR r.accountBook.accountBookId IN (" +
+                        "  SELECT m.accountBook.accountBookId FROM AccountBookMember m WHERE m.user.userId = :userId)) "
+                        +
+                        "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
+                        "ORDER BY r.nextPaymentDate ASC")
+        List<RecurringExpense> findUpcomingPaymentsWithSharedBooks(
+                        @Param("userId") UUID userId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
 
-    /**
-     * 특정 기간 내 결제 예정인 고정비 조회 (커플 포함)
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
-            "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
-            "ORDER BY r.nextPaymentDate ASC")
-    List<RecurringExpense> findUpcomingPaymentsWithCouple(
-            @Param("userId") UUID userId,
-            @Param("coupleId") UUID coupleId,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
-    );
+        /**
+         * 월간 고정비 총액 (공유 장부 포함)
+         */
+        @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r WHERE " +
+                        "(r.user.userId = :userId OR r.accountBook.accountBookId IN (" +
+                        "  SELECT m.accountBook.accountBookId FROM AccountBookMember m WHERE m.user.userId = :userId)) "
+                        +
+                        "AND r.recurringType = 'MONTHLY' " +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        BigDecimal calculateMonthlyTotalWithSharedBooks(@Param("userId") UUID userId);
 
-    /**
-     * 특정 카테고리의 고정비 조회
-     */
-    List<RecurringExpense> findByUser_UserIdAndCategory(UUID userId, String category);
+        // ========== 개인 전용 쿼리 ==========
 
-    /**
-     * 종료되지 않은 고정비만 조회
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
-            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
-    List<RecurringExpense> findActiveRecurringExpenses(@Param("userId") UUID userId);
+        /**
+         * 구독료만 조회
+         */
+        List<RecurringExpense> findByUser_UserIdAndIsSubscription(UUID userId, Boolean isSubscription);
 
-    /**
-     * 종료되지 않은 고정비만 조회 (커플 포함)
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
-            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
-    List<RecurringExpense> findActiveRecurringExpensesWithCouple(
-            @Param("userId") UUID userId,
-            @Param("coupleId") UUID coupleId
-    );
+        /**
+         * 특정 기간 내 결제 예정인 고정비 조회 (개인만)
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+                        "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
+                        "ORDER BY r.nextPaymentDate ASC")
+        List<RecurringExpense> findUpcomingPayments(
+                        @Param("userId") UUID userId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
 
-    /**
-     * 월간 고정비 총액 계산
-     */
-    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
-            "WHERE r.user.userId = :userId " +
-            "AND r.recurringType = 'MONTHLY' " +
-            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
-    BigDecimal calculateMonthlyTotal(@Param("userId") UUID userId);
+        /**
+         * 특정 카테고리의 고정비 조회
+         */
+        List<RecurringExpense> findByUser_UserIdAndCategory(UUID userId, String category);
 
-    /**
-     * 월간 고정비 총액 계산 (커플 포함)
-     */
-    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
-            "WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
-            "AND r.recurringType = 'MONTHLY' " +
-            "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
-    BigDecimal calculateMonthlyTotalWithCouple(
-            @Param("userId") UUID userId,
-            @Param("coupleId") UUID coupleId
-    );
+        /**
+         * 종료되지 않은 고정비만 조회 (개인만)
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        List<RecurringExpense> findActiveRecurringExpenses(@Param("userId") UUID userId);
 
-    /**
-     * 알림이 활성화된 고정비 조회
-     */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
-            "AND r.notificationEnabled = true " +
-            "AND r.nextPaymentDate = :date")
-    List<RecurringExpense> findNotificationEnabledByDate(
-            @Param("userId") UUID userId,
-            @Param("date") LocalDate date
-    );
+        /**
+         * 월간 고정비 총액 계산 (개인만)
+         */
+        @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
+                        "WHERE r.user.userId = :userId " +
+                        "AND r.recurringType = 'MONTHLY' " +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        BigDecimal calculateMonthlyTotal(@Param("userId") UUID userId);
 
-    /**
-     * 자동 탐지된 고정비 조회
-     */
-    List<RecurringExpense> findByUser_UserIdAndAutoDetected(UUID userId, Boolean autoDetected);
+        /**
+         * 알림이 활성화된 고정비 조회
+         */
+        @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId " +
+                        "AND r.notificationEnabled = true " +
+                        "AND r.nextPaymentDate = :date")
+        List<RecurringExpense> findNotificationEnabledByDate(
+                        @Param("userId") UUID userId,
+                        @Param("date") LocalDate date);
 
-    /**
-     * 특정 구독 제공자의 고정비 조회
-     */
-    Optional<RecurringExpense> findByUser_UserIdAndSubscriptionProvider(UUID userId, String subscriptionProvider);
+        /**
+         * 자동 탐지된 고정비 조회
+         */
+        List<RecurringExpense> findByUser_UserIdAndAutoDetected(UUID userId, Boolean autoDetected);
+
+        /**
+         * 특정 구독 제공자의 고정비 조회
+         */
+        Optional<RecurringExpense> findByUser_UserIdAndSubscriptionProvider(UUID userId, String subscriptionProvider);
+
+        // ========== Deprecated (coupleId 기반) ==========
+
+        /**
+         * @deprecated accountBook 기반 쿼리를 사용하세요
+         */
+        @Deprecated
+        List<RecurringExpense> findByCoupleId(UUID coupleId);
+
+        /**
+         * @deprecated findByUserOrSharedAccountBooks 를 사용하세요
+         */
+        @Deprecated
+        @Query("SELECT r FROM RecurringExpense r WHERE r.user.userId = :userId OR r.coupleId = :coupleId")
+        List<RecurringExpense> findByUserIdOrCoupleId(@Param("userId") UUID userId, @Param("coupleId") UUID coupleId);
+
+        /**
+         * @deprecated findActiveRecurringExpensesWithSharedBooks 를 사용하세요
+         */
+        @Deprecated
+        @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        List<RecurringExpense> findActiveRecurringExpensesWithCouple(
+                        @Param("userId") UUID userId,
+                        @Param("coupleId") UUID coupleId);
+
+        /**
+         * @deprecated findUpcomingPaymentsWithSharedBooks 를 사용하세요
+         */
+        @Deprecated
+        @Query("SELECT r FROM RecurringExpense r WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+                        "AND r.nextPaymentDate BETWEEN :startDate AND :endDate " +
+                        "ORDER BY r.nextPaymentDate ASC")
+        List<RecurringExpense> findUpcomingPaymentsWithCouple(
+                        @Param("userId") UUID userId,
+                        @Param("coupleId") UUID coupleId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * @deprecated calculateMonthlyTotalWithSharedBooks 를 사용하세요
+         */
+        @Deprecated
+        @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r " +
+                        "WHERE (r.user.userId = :userId OR r.coupleId = :coupleId) " +
+                        "AND r.recurringType = 'MONTHLY' " +
+                        "AND (r.endDate IS NULL OR r.endDate >= CURRENT_DATE)")
+        BigDecimal calculateMonthlyTotalWithCouple(
+                        @Param("userId") UUID userId,
+                        @Param("coupleId") UUID coupleId);
 }
