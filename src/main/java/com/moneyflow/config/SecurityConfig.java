@@ -68,6 +68,7 @@ public class SecurityConfig {
                     }
 
                     auth.requestMatchers("/api/auth/**").permitAll()
+                            .requestMatchers("/api/test/**").permitAll()  // 테스트 엔드포인트
                             .requestMatchers(
                                     "/swagger-ui.html",
                                     "/swagger-ui/**",
