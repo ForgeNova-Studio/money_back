@@ -38,12 +38,6 @@ public class ExpenseRequest {
     private String imageUrl;
 
     /**
-     * @deprecated accountBookId를 사용하세요.
-     */
-    @Deprecated
-    private UUID coupleId;
-
-    /**
      * 소속 장부 ID
      */
     private UUID accountBookId;
