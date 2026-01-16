@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 월간 통계 응답 DTO
@@ -21,6 +22,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MonthlyStatisticsResponse {
+
+    /**
+     * 장부 ID
+     */
+    private UUID accountBookId;
+
+    /**
+     * 장부 이름
+     */
+    private String accountBookName;
 
     /**
      * 총 지출 금액

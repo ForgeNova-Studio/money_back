@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 주간 통계 응답 DTO
@@ -22,6 +23,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WeeklyStatisticsResponse {
+
+    /**
+     * 장부 ID
+     */
+    private UUID accountBookId;
+
+    /**
+     * 장부 이름
+     */
+    private String accountBookName;
 
     /**
      * 일별 지출 내역 리스트
