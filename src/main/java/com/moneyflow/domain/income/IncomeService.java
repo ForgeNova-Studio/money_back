@@ -193,16 +193,9 @@ public class IncomeService {
          * @return 수입 응답 DTO
          */
         private IncomeResponse toResponse(Income income) {
-                // accountBook에서 coupleId 추출 (deprecated 필드 대체)
-                UUID coupleId = null;
-                if (income.getAccountBook() != null && income.getAccountBook().getCouple() != null) {
-                        coupleId = income.getAccountBook().getCouple().getCoupleId();
-                }
-
                 return IncomeResponse.builder()
                                 .incomeId(income.getIncomeId())
                                 .userId(income.getUser().getUserId())
-                                .coupleId(coupleId)
                                 .accountBookId(income.getAccountBook() != null
                                                 ? income.getAccountBook().getAccountBookId()
                                                 : null)

@@ -186,16 +186,9 @@ public class ExpenseService {
      * Entity를 Response DTO로 변환
      */
     private ExpenseResponse toResponse(Expense expense) {
-        // accountBook에서 coupleId 추출 (deprecated 필드 대체)
-        UUID coupleId = null;
-        if (expense.getAccountBook() != null && expense.getAccountBook().getCouple() != null) {
-            coupleId = expense.getAccountBook().getCouple().getCoupleId();
-        }
-
         return ExpenseResponse.builder()
                 .expenseId(expense.getExpenseId())
                 .userId(expense.getUser().getUserId())
-                .coupleId(coupleId)
                 .accountBookId(expense.getAccountBook() != null ? expense.getAccountBook().getAccountBookId() : null)
                 .fundingSource(expense.getFundingSource() != null ? expense.getFundingSource().name() : null)
                 .amount(expense.getAmount())

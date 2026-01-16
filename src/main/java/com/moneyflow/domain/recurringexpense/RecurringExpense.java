@@ -34,13 +34,6 @@ public class RecurringExpense {
     private User user;
 
     /**
-     * @deprecated accountBookId를 사용하세요.
-     */
-    @Deprecated
-    @Column(name = "couple_id")
-    private UUID coupleId;
-
-    /**
      * 소속 장부 (여행, 생활비 등)
      */
     @ManyToOne(fetch = FetchType.LAZY)

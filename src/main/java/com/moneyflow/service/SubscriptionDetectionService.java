@@ -1,6 +1,5 @@
 package com.moneyflow.service;
 
-import com.moneyflow.domain.couple.CoupleRepository;
 import com.moneyflow.domain.expense.Expense;
 import com.moneyflow.domain.expense.ExpenseRepository;
 import com.moneyflow.domain.recurringexpense.RecurringExpense;
@@ -32,67 +31,61 @@ public class SubscriptionDetectionService {
     private final ExpenseRepository expenseRepository;
     private final RecurringExpenseRepository recurringExpenseRepository;
     private final UserRepository userRepository;
-    private final CoupleRepository coupleRepository;
-
-    /**
-     * 사용자의 커플 ID 조회 (있으면 반환, 없으면 null)
-     */
-    private UUID getUserCoupleId(UUID userId) {
-        return coupleRepository.findByUserId(userId)
-                .map(com.moneyflow.domain.couple.Couple::getCoupleId)
-                .orElse(null);
-    }
+    private final com.moneyflow.domain.accountbook.AccountBookRepository accountBookRepository;
 
     // 유명 구독 서비스 키워드 맵
-    private static final Map<String, String> SUBSCRIPTION_KEYWORDS = new HashMap<>() {{
-        // 스트리밍
-        put("넷플릭스", "문화/여가");
-        put("netflix", "문화/여가");
-        put("유튜브", "문화/여가");
-        put("youtube", "문화/여가");
-        put("youtube premium", "문화/여가");
-        put("디즈니", "문화/여가");
-        put("disney", "문화/여가");
-        put("왓챠", "문화/여가");
-        put("watcha", "문화/여가");
-        put("웨이브", "문화/여가");
-        put("wavve", "문화/여가");
-        put("티빙", "문화/여가");
-        put("tving", "문화/여가");
+    private static final Map<String, String> SUBSCRIPTION_KEYWORDS = new HashMap<>() {
+        {
+            // 스트리밍
+            put("넷플릭스", "문화/여가");
+            put("netflix", "문화/여가");
+            put("유튜브", "문화/여가");
+            put("youtube", "문화/여가");
+            put("youtube premium", "문화/여가");
+            put("디즈니", "문화/여가");
+            put("disney", "문화/여가");
+            put("왓챠", "문화/여가");
+            put("watcha", "문화/여가");
+            put("웨이브", "문화/여가");
+            put("wavve", "문화/여가");
+            put("티빙", "문화/여가");
+            put("tving", "문화/여가");
 
-        // 음악
-        put("스포티파이", "문화/여가");
-        put("spotify", "문화/여가");
-        put("멜론", "문화/여가");
-        put("melon", "문화/여가");
-        put("지니", "문화/여가");
-        put("genie", "문화/여가");
-        put("애플뮤직", "문화/여가");
-        put("apple music", "문화/여가");
+            // 음악
+            put("스포티파이", "문화/여가");
+            put("spotify", "문화/여가");
+            put("멜론", "문화/여가");
+            put("melon", "문화/여가");
+            put("지니", "문화/여가");
+            put("genie", "문화/여가");
+            put("애플뮤직", "문화/여가");
+            put("apple music", "문화/여가");
 
-        // 클라우드/소프트웨어
-        put("아이클라우드", "기타");
-        put("icloud", "기타");
-        put("구글드라이브", "기타");
-        put("google drive", "기타");
-        put("google one", "기타");
-        put("드롭박스", "기타");
-        put("dropbox", "기타");
-        put("notion", "기타");
-        put("노션", "기타");
+            // 클라우드/소프트웨어
+            put("아이클라우드", "기타");
+            put("icloud", "기타");
+            put("구글드라이브", "기타");
+            put("google drive", "기타");
+            put("google one", "기타");
+            put("드롭박스", "기타");
+            put("dropbox", "기타");
+            put("notion", "기타");
+            put("노션", "기타");
 
-        // 배달/멤버십
-        put("쿠팡", "기타");
-        put("coupang", "기타");
-        put("쿠팡이츠", "식비");
-        put("배달의민족", "식비");
-        put("배민", "식비");
-        put("요기요", "식비");
-    }};
+            // 배달/멤버십
+            put("쿠팡", "기타");
+            put("coupang", "기타");
+            put("쿠팡이츠", "식비");
+            put("배달의민족", "식비");
+            put("배민", "식비");
+            put("요기요", "식비");
+        }
+    };
 
     /**
      * 사용자의 지출 내역을 분석하여 구독료 자동 탐지
-     * @param userId 사용자 ID
+     * 
+     * @param userId          사용자 ID
      * @param monthsToAnalyze 분석할 과거 개월 수 (기본: 3개월)
      * @return 탐지된 구독료 목록
      */
@@ -184,8 +177,7 @@ public class SubscriptionDetectionService {
         for (int i = 1; i < expenses.size(); i++) {
             long daysBetween = ChronoUnit.DAYS.between(
                     expenses.get(i - 1).getDate(),
-                    expenses.get(i).getDate()
-            );
+                    expenses.get(i).getDate());
             intervals.add(daysBetween);
         }
 
@@ -292,9 +284,14 @@ public class SubscriptionDetectionService {
      * 패턴으로부터 RecurringExpense 생성
      */
     private RecurringExpense createSubscriptionFromPattern(User user, String merchant, SubscriptionPattern pattern) {
+        // 사용자의 기본 장부 조회
+        com.moneyflow.domain.accountbook.AccountBook defaultAccountBook = accountBookRepository
+                .findDefaultAccountBookByUserId(user.getUserId())
+                .orElse(null);
+
         return RecurringExpense.builder()
                 .user(user)
-                .coupleId(getUserCoupleId(user.getUserId()))
+                .accountBook(defaultAccountBook)
                 .name(merchant)
                 .amount(pattern.getAmount())
                 .category(pattern.getCategory())

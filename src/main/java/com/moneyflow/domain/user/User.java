@@ -8,6 +8,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * 사용자 프로필 엔티티
+ * 
+ * 인증 정보(비밀번호, 소셜 로그인 등)는 UserAuth 테이블로 분리되었습니다.
+ * 이 엔티티는 사용자의 프로필 정보만 관리합니다.
+ */
 @Entity
 @Table(name = "users")
 @Getter
@@ -25,19 +31,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash")
-    private String passwordHash;  // 소셜 로그인 시 null 가능
-
     @Column(nullable = false, length = 50)
     private String nickname;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private AuthProvider provider = AuthProvider.EMAIL;  // 기본값: EMAIL
-
-    @Column(name = "provider_id")
-    private String providerId;  // 소셜 로그인 제공자의 사용자 고유 ID
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;

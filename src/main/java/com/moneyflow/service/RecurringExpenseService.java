@@ -313,16 +313,9 @@ public class RecurringExpenseService {
      * Entity → Response DTO 변환
      */
     private RecurringExpenseResponse toResponse(RecurringExpense expense) {
-        // accountBook에서 coupleId 추출 (deprecated 필드 대체)
-        UUID coupleId = null;
-        if (expense.getAccountBook() != null && expense.getAccountBook().getCouple() != null) {
-            coupleId = expense.getAccountBook().getCouple().getCoupleId();
-        }
-
         return RecurringExpenseResponse.builder()
                 .recurringExpenseId(expense.getRecurringExpenseId())
                 .userId(expense.getUser().getUserId())
-                .coupleId(coupleId)
                 .accountBookId(expense.getAccountBook() != null ? expense.getAccountBook().getAccountBookId() : null)
                 .name(expense.getName())
                 .amount(expense.getAmount())

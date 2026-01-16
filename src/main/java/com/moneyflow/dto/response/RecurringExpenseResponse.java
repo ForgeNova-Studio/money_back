@@ -28,8 +28,8 @@ public class RecurringExpenseResponse {
     @Schema(description = "사용자 ID", example = "123e4567-e89b-12d3-a456-426614174001")
     private UUID userId;
 
-    @Schema(description = "커플 ID (null이면 개인 고정비)", example = "123e4567-e89b-12d3-a456-426614174002")
-    private UUID coupleId;
+    @Schema(description = "소속 장부 ID", example = "123e4567-e89b-12d3-a456-426614174003")
+    private UUID accountBookId;
 
     @Schema(description = "고정비 이름", example = "넷플릭스")
     private String name;

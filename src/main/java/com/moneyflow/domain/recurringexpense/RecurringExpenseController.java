@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 고정비 및 구독료 관리 컨트롤러
@@ -353,7 +354,7 @@ public class RecurringExpenseController {
                 .map(e -> RecurringExpenseResponse.builder()
                         .recurringExpenseId(e.getRecurringExpenseId())
                         .userId(e.getUser().getUserId())
-                        .coupleId(e.getCoupleId())
+                        .accountBookId(e.getAccountBook() != null ? e.getAccountBook().getAccountBookId() : null)
                         .name(e.getName())
                         .amount(e.getAmount())
                         .category(e.getCategory())
@@ -376,7 +377,7 @@ public class RecurringExpenseController {
                         .hasAmountChanged(e.hasAmountChanged())
                         .isExpired(e.isExpired())
                         .build())
-                .toList();
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(responses);
     }

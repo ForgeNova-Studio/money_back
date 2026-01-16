@@ -16,13 +16,6 @@ public class ExpenseResponse {
 
     private UUID expenseId;
     private UUID userId;
-
-    /**
-     * @deprecated accountBookId를 사용하세요.
-     */
-    @Deprecated
-    private UUID coupleId;
-
     private UUID accountBookId;
     private String fundingSource;
     private BigDecimal amount;

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * 고정비/구독료 등록 요청 DTO
@@ -20,6 +21,10 @@ import java.time.LocalDate;
 @Builder
 @Schema(description = "고정비/구독료 등록 요청")
 public class CreateRecurringExpenseRequest {
+
+    @NotNull(message = "장부 ID는 필수입니다")
+    @Schema(description = "소속 장부 ID", required = true)
+    private UUID accountBookId;
 
     @NotBlank(message = "이름은 필수입니다")
     @Size(max = 100, message = "이름은 100자 이하여야 합니다")

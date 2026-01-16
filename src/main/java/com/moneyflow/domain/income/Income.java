@@ -20,8 +20,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "incomes", indexes = {
-        @Index(name = "idx_income_user_date", columnList = "user_id, date DESC"),
-        @Index(name = "idx_income_couple_date", columnList = "couple_id, date DESC")
+        @Index(name = "idx_income_user_date", columnList = "user_id, date DESC")
 })
 @Getter
 @Setter
@@ -44,14 +43,6 @@ public class Income {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    /**
-     * @deprecated accountBookId를 사용하세요.
-     *             이 필드는 하위 호환성을 위해 유지되며, 향후 제거될 예정입니다.
-     */
-    @Deprecated
-    @Column(name = "couple_id")
-    private UUID coupleId;
 
     /**
      * 소속 장부 (여행, 생활비 등)
