@@ -5,6 +5,8 @@ import com.moneyflow.domain.token.RefreshToken;
 import com.moneyflow.domain.token.RefreshTokenRepository;
 import com.moneyflow.domain.user.AuthProvider;
 import com.moneyflow.domain.user.User;
+import com.moneyflow.domain.user.UserAuth;
+import com.moneyflow.domain.user.UserAuthRepository;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.domain.verification.EmailVerification;
 import com.moneyflow.domain.verification.EmailVerificationRepository;
@@ -50,6 +52,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserAuthRepository userAuthRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
@@ -73,8 +76,7 @@ public class AuthService {
         EmailVerification verification = emailVerificationRepository
                 .findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
                         request.getEmail(),
-                        EmailVerification.VerificationType.SIGNUP
-                )
+                        EmailVerification.VerificationType.SIGNUP)
                 .orElseThrow(() -> new BusinessException("이메일 인증을 먼저 완료해주세요"));
 
         // 인증 완료 후 5분 이내 확인
@@ -82,15 +84,22 @@ public class AuthService {
             throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요");
         }
 
-        // 사용자 생성
+        // 사용자 생성 (프로필 정보만)
         User user = User.builder()
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .gender(request.getGender())
                 .build();
 
         user = userRepository.save(user);
+
+        // EMAIL 인증 정보 생성 (UserAuth 테이블)
+        UserAuth emailAuth = UserAuth.builder()
+                .user(user)
+                .provider(AuthProvider.EMAIL)
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .build();
+        userAuthRepository.save(emailAuth);
 
         accountBookService.createDefaultAccountBookIfMissing(user);
 
@@ -120,9 +129,7 @@ public class AuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
-                            request.getPassword()
-                    )
-            );
+                            request.getPassword()));
 
             // 사용자 조회
             User user = userRepository.findByEmail(request.getEmail())
@@ -200,12 +207,13 @@ public class AuthService {
                 throw new BusinessException("지원하지 않는 로그인 제공자입니다");
             }
 
-            // 기존 사용자 조회 (provider + providerId)
-            User user = userRepository.findByProviderAndProviderId(request.getProvider(), providerId)
+            // 기존 사용자 조회 (UserAuth 테이블에서 provider + providerId로)
+            UserAuth existingAuth = userAuthRepository.findByProviderAndProviderId(request.getProvider(), providerId)
                     .orElse(null);
 
+            User user;
             // 기존 사용자 없음 → 자동 회원가입
-            if (user == null) {
+            if (existingAuth == null) {
                 // 이메일로 다른 provider의 기존 사용자가 있는지 확인
                 if (userRepository.existsByEmail(email)) {
                     throw new BusinessException("이미 다른 방법으로 가입된 이메일입니다");
@@ -216,20 +224,26 @@ public class AuthService {
                     name = email.split("@")[0];
                 }
 
-                // 자동 회원가입
+                // 사용자 생성 (프로필 정보만)
                 user = User.builder()
                         .email(email)
                         .nickname(name)
+                        .build();
+                user = userRepository.save(user);
+
+                // 소셜 로그인 인증 정보 생성 (UserAuth 테이블)
+                UserAuth socialAuth = UserAuth.builder()
+                        .user(user)
                         .provider(request.getProvider())
                         .providerId(providerId)
-                        .passwordHash(null)  // 소셜 로그인은 비밀번호 없음
                         .build();
+                userAuthRepository.save(socialAuth);
 
-                user = userRepository.save(user);
                 accountBookService.createDefaultAccountBookIfMissing(user);
                 log.info("소셜 로그인으로 새로운 사용자 등록: {} ({})", email, request.getProvider());
             } else {
-                log.info("소셜 로그인: {} ({})", email, request.getProvider());
+                user = existingAuth.getUser();
+                log.info("소셜 로그인: {} ({})", user.getEmail(), request.getProvider());
             }
 
             // JWT 토큰 생성
@@ -273,27 +287,36 @@ public class AuthService {
 
         // Mock 사용자 정보 생성
         String email = "mock_" + request.getProvider().name().toLowerCase() + "_" +
-                       System.currentTimeMillis() + "@test.com";
+                System.currentTimeMillis() + "@test.com";
         String providerId = "MOCK_" + System.currentTimeMillis();
         String name = request.getNickname() != null ? request.getNickname() : "Mock User";
 
-        // 기존 사용자 조회 (provider + providerId)
-        User user = userRepository.findByProviderAndProviderId(request.getProvider(), providerId)
+        // 기존 사용자 조회 (UserAuth 테이블에서 provider + providerId로)
+        UserAuth existingAuth = userAuthRepository.findByProviderAndProviderId(request.getProvider(), providerId)
                 .orElse(null);
 
+        User user;
         // 기존 사용자 없음 → 자동 회원가입
-        if (user == null) {
+        if (existingAuth == null) {
+            // 사용자 생성 (프로필 정보만)
             user = User.builder()
                     .email(email)
                     .nickname(name)
+                    .build();
+            user = userRepository.save(user);
+
+            // 소셜 로그인 인증 정보 생성
+            UserAuth socialAuth = UserAuth.builder()
+                    .user(user)
                     .provider(request.getProvider())
                     .providerId(providerId)
-                    .passwordHash(null)
                     .build();
+            userAuthRepository.save(socialAuth);
 
-            user = userRepository.save(user);
             accountBookService.createDefaultAccountBookIfMissing(user);
             log.info("Mock 소셜 로그인으로 새로운 사용자 등록: {} ({})", email, request.getProvider());
+        } else {
+            user = existingAuth.getUser();
         }
 
         // JWT 토큰 생성
@@ -396,8 +419,10 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
 
-        // 소셜 로그인 사용자는 비밀번호 재설정 불가
-        if (user.getProvider() != AuthProvider.EMAIL) {
+        // EMAIL provider 인증 정보가 없으면 소셜 로그인 사용자
+        boolean hasEmailAuth = userAuthRepository.findByUserUserIdAndProvider(user.getUserId(), AuthProvider.EMAIL)
+                .isPresent();
+        if (!hasEmailAuth) {
             throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
         }
 
@@ -474,10 +499,9 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("가입되지 않은 이메일입니다"));
 
-        // 소셜 로그인 사용자는 비밀번호 재설정 불가
-        if (user.getProvider() != AuthProvider.EMAIL) {
-            throw new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다");
-        }
+        // EMAIL provider 인증 정보 조회 - 없으면 소셜 로그인 사용자
+        UserAuth emailAuth = userAuthRepository.findByUserUserIdAndProvider(user.getUserId(), AuthProvider.EMAIL)
+                .orElseThrow(() -> new BusinessException("소셜 로그인 사용자는 비밀번호를 재설정할 수 없습니다"));
 
         // 인증 완료된 정보 조회 (가장 최근 것)
         EmailVerification verification = emailVerificationRepository
@@ -490,9 +514,9 @@ public class AuthService {
             throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요.");
         }
 
-        // 비밀번호 재설정
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+        // UserAuth 테이블에서 비밀번호 재설정
+        emailAuth.setPasswordHash(passwordEncoder.encode(newPassword));
+        userAuthRepository.save(emailAuth);
 
         // 사용된 인증 정보 삭제
         emailVerificationRepository.delete(verification);
@@ -514,7 +538,8 @@ public class AuthService {
             throw new UnauthorizedException("인증되지 않은 사용자입니다");
         }
 
-        // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을 userId.toString()로 설정했음)
+        // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을
+        // userId.toString()로 설정했음)
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetails)) {
             throw new UnauthorizedException("인증 정보가 올바르지 않습니다");
