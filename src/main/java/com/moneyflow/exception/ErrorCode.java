@@ -24,6 +24,8 @@ public enum ErrorCode {
     TOKEN_EXPIRED("A002", "인증이 만료되었습니다", HttpStatus.UNAUTHORIZED),
     ACCESS_DENIED("A003", "접근 권한이 없습니다", HttpStatus.FORBIDDEN),
     EMAIL_ALREADY_EXISTS("A004", "이미 사용 중인 이메일입니다", HttpStatus.CONFLICT),
+    INVALID_OAUTH_TOKEN("A005", "유효하지 않은 소셜 로그인 토큰입니다", HttpStatus.UNAUTHORIZED),
+    OAUTH_API_ERROR("A006", "소셜 로그인 서비스 오류가 발생했습니다", HttpStatus.BAD_GATEWAY),
 
     // ===== 사용자 (USER) =====
     USER_NOT_FOUND("U001", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

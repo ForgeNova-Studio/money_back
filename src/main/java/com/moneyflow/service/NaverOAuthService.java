@@ -2,6 +2,8 @@ package com.moneyflow.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -22,37 +24,26 @@ public class NaverOAuthService {
 
     /**
      * Naver Access Token 검증 및 사용자 정보 추출
-     *
-     * @param accessToken Naver Access Token
-     * @return 사용자 정보 (이메일, 이름, providerId)
-     * @throws IllegalArgumentException 유효하지 않은 토큰
      */
     public NaverUserInfo verifyAccessToken(String accessToken) {
         try {
-            // HTTP 헤더 설정 (Bearer Token)
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + accessToken);
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // Naver 사용자 정보 API 호출
             ResponseEntity<String> response = restTemplate.exchange(
                     NAVER_USER_INFO_URL,
                     HttpMethod.GET,
                     entity,
-                    String.class
-            );
+                    String.class);
 
-            // JSON 파싱
             JsonNode rootNode = objectMapper.readTree(response.getBody());
             String resultCode = rootNode.path("resultcode").asText();
 
-            // 결과 코드 확인 (00: 성공)
             if (!"00".equals(resultCode)) {
-                String message = rootNode.path("message").asText();
-                throw new IllegalArgumentException("Naver API error: " + message);
+                throw new BusinessException(ErrorCode.OAUTH_API_ERROR);
             }
 
-            // 사용자 정보 추출
             JsonNode responseNode = rootNode.path("response");
             String providerId = responseNode.path("id").asText();
             String email = responseNode.path("email").asText();
@@ -60,30 +51,23 @@ public class NaverOAuthService {
             String nickname = responseNode.path("nickname").asText();
             String profileImage = responseNode.path("profile_image").asText();
 
-            // 이메일 또는 ID가 없으면 예외
             if (providerId == null || providerId.isEmpty()) {
-                throw new IllegalArgumentException("Invalid Naver access token: missing provider ID");
+                throw new BusinessException(ErrorCode.INVALID_OAUTH_TOKEN);
             }
 
-            // 이름이 없으면 닉네임 사용
             if (name == null || name.isEmpty()) {
                 name = nickname;
             }
 
             return new NaverUserInfo(providerId, email, name, profileImage);
 
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid Naver access token: " + e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INVALID_OAUTH_TOKEN);
         }
     }
 
-    /**
-     * Naver 사용자 정보
-     */
-    public record NaverUserInfo(
-            String providerId,
-            String email,
-            String name,
-            String profileImage
-    ) {}
+    public record NaverUserInfo(String providerId, String email, String name, String profileImage) {
+    }
 }

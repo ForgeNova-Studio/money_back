@@ -9,7 +9,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Random;
+import java.security.SecureRandom;
 
 /**
  * 이메일 발송 서비스
@@ -29,13 +29,13 @@ public class EmailService {
     private boolean testMode;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final Random random = new Random();
+    private final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * 6자리 랜덤 인증 코드 생성
+     * 6자리 랜덤 인증 코드 생성 (암호학적으로 안전)
      */
     public String generateVerificationCode() {
-        return String.format("%06d", random.nextInt(1000000));
+        return String.format("%06d", secureRandom.nextInt(1000000));
     }
 
     /**
@@ -72,18 +72,17 @@ public class EmailService {
         try {
             String requestBody = String.format(
                     """
-                    {
-                        "from": "%s",
-                        "to": ["%s"],
-                        "subject": "%s",
-                        "html": "%s"
-                    }
-                    """,
+                            {
+                                "from": "%s",
+                                "to": ["%s"],
+                                "subject": "%s",
+                                "html": "%s"
+                            }
+                            """,
                     fromEmail,
                     toEmail,
                     subject,
-                    escapeJson(htmlContent)
-            );
+                    escapeJson(htmlContent));
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.resend.com/emails"))
@@ -127,7 +126,8 @@ public class EmailService {
                     </div>
                 </body>
                 </html>
-                """.formatted(verificationCode);
+                """
+                .formatted(verificationCode);
     }
 
     /**
@@ -151,7 +151,8 @@ public class EmailService {
                     </div>
                 </body>
                 </html>
-                """.formatted(verificationCode);
+                """
+                .formatted(verificationCode);
     }
 
     /**

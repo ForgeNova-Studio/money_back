@@ -2,6 +2,8 @@ package com.moneyflow.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -22,58 +24,41 @@ public class KakaoOAuthService {
 
     /**
      * Kakao Access Token 검증 및 사용자 정보 추출
-     *
-     * @param accessToken Kakao Access Token
-     * @return 사용자 정보 (이메일, 닉네임, providerId)
-     * @throws IllegalArgumentException 유효하지 않은 토큰
      */
     public KakaoUserInfo verifyAccessToken(String accessToken) {
         try {
-            // HTTP 헤더 설정 (Bearer Token)
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + accessToken);
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // Kakao 사용자 정보 API 호출
             ResponseEntity<String> response = restTemplate.exchange(
                     KAKAO_USER_INFO_URL,
                     HttpMethod.GET,
                     entity,
-                    String.class
-            );
+                    String.class);
 
-            // JSON 파싱
             JsonNode rootNode = objectMapper.readTree(response.getBody());
-
-            // 사용자 정보 추출
             String providerId = rootNode.path("id").asText();
             JsonNode kakaoAccount = rootNode.path("kakao_account");
             String email = kakaoAccount.path("email").asText();
 
-            // 프로필 정보 추출
             JsonNode profile = kakaoAccount.path("profile");
             String nickname = profile.path("nickname").asText();
             String profileImageUrl = profile.path("profile_image_url").asText();
 
-            // ID가 없으면 예외
             if (providerId == null || providerId.isEmpty()) {
-                throw new IllegalArgumentException("Invalid Kakao access token: missing provider ID");
+                throw new BusinessException(ErrorCode.INVALID_OAUTH_TOKEN);
             }
 
             return new KakaoUserInfo(providerId, email, nickname, profileImageUrl);
 
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid Kakao access token: " + e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INVALID_OAUTH_TOKEN);
         }
     }
 
-    /**
-     * Kakao 사용자 정보
-     */
-    public record KakaoUserInfo(
-            String providerId,
-            String email,
-            String nickname,
-            String profileImage
-    ) {}
+    public record KakaoUserInfo(String providerId, String email, String nickname, String profileImage) {
+    }
 }
