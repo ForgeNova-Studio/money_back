@@ -7,6 +7,8 @@ import com.moneyflow.domain.recurringexpense.RecurringExpenseRepository;
 import com.moneyflow.domain.recurringexpense.RecurringType;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -92,7 +94,7 @@ public class SubscriptionDetectionService {
     @Transactional
     public List<RecurringExpense> detectSubscriptions(UUID userId, Integer monthsToAnalyze) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         int months = monthsToAnalyze != null ? monthsToAnalyze : 3;
         LocalDate startDate = LocalDate.now().minusMonths(months);
