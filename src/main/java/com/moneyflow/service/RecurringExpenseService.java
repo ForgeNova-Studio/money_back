@@ -10,6 +10,8 @@ import com.moneyflow.dto.request.CreateRecurringExpenseRequest;
 import com.moneyflow.dto.request.UpdateRecurringExpenseRequest;
 import com.moneyflow.dto.response.MonthlyRecurringTotalResponse;
 import com.moneyflow.dto.response.RecurringExpenseResponse;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +48,7 @@ public class RecurringExpenseService {
 
         // 장부 검증 (필수)
         if (request.getAccountBookId() == null) {
-            throw new IllegalArgumentException("장부 ID는 필수입니다");
+            throw new BusinessException(ErrorCode.ACCOUNT_BOOK_REQUIRED);
         }
 
         AccountBook accountBook = accountBookRepository.findById(request.getAccountBookId())

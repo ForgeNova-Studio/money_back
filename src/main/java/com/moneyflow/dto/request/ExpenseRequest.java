@@ -21,7 +21,9 @@ public class ExpenseRequest {
     @NotNull(message = "날짜는 필수입니다")
     private LocalDate date;
 
-    @NotBlank(message = "카테고리는 필수입니다")
+    /**
+     * 카테고리 (선택) - 미입력 시 자동 분류
+     */
     @Size(max = 50)
     private String category;
 
