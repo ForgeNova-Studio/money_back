@@ -5,6 +5,7 @@ import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.ExpenseRequest;
+import com.moneyflow.dto.response.BulkExpenseResponse;
 import com.moneyflow.dto.response.ExpenseListResponse;
 import com.moneyflow.dto.response.ExpenseResponse;
 import com.moneyflow.exception.ResourceNotFoundException;
@@ -180,6 +181,39 @@ public class ExpenseService {
         return expenses.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 일괄 지출 생성 (OCR 결과 저장용)
+     */
+    @Transactional
+    public BulkExpenseResponse createBulkExpenses(UUID userId, List<ExpenseRequest> requests) {
+        List<ExpenseResponse> savedExpenses = new java.util.ArrayList<>();
+        List<BulkExpenseResponse.FailedItem> failures = new java.util.ArrayList<>();
+
+        for (int i = 0; i < requests.size(); i++) {
+            try {
+                ExpenseResponse response = createExpense(userId, requests.get(i));
+                savedExpenses.add(response);
+            } catch (Exception e) {
+                log.error("Failed to create expense at index {}: {}", i, e.getMessage());
+                failures.add(BulkExpenseResponse.FailedItem.builder()
+                        .index(i)
+                        .reason(e.getMessage())
+                        .build());
+            }
+        }
+
+        log.info("Bulk expense creation: {} success, {} failed out of {} total",
+                savedExpenses.size(), failures.size(), requests.size());
+
+        return BulkExpenseResponse.builder()
+                .totalRequested(requests.size())
+                .successCount(savedExpenses.size())
+                .failedCount(failures.size())
+                .savedExpenses(savedExpenses)
+                .failures(failures.isEmpty() ? null : failures)
+                .build();
     }
 
     /**

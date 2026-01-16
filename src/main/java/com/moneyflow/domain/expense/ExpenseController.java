@@ -1,6 +1,8 @@
 package com.moneyflow.domain.expense;
 
+import com.moneyflow.dto.request.BulkExpenseRequest;
 import com.moneyflow.dto.request.ExpenseRequest;
+import com.moneyflow.dto.response.BulkExpenseResponse;
 import com.moneyflow.dto.response.ExpenseListResponse;
 import com.moneyflow.dto.response.ExpenseResponse;
 import com.moneyflow.dto.response.OcrResponse;
@@ -47,6 +49,21 @@ public class ExpenseController {
 
         UUID userId = UUID.fromString(userDetails.getUsername());
         ExpenseResponse response = expenseService.createExpense(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/bulk")
+    @Operation(summary = "일괄 지출 생성", description = "OCR 결과 등 여러 지출을 한 번에 저장합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "일괄 생성 완료"),
+            @ApiResponse(responseCode = "400", description = "입력값 검증 실패")
+    })
+    public ResponseEntity<BulkExpenseResponse> createBulkExpenses(
+            @Valid @RequestBody BulkExpenseRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        UUID userId = UUID.fromString(userDetails.getUsername());
+        BulkExpenseResponse response = expenseService.createBulkExpenses(userId, request.getExpenses());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -107,30 +124,16 @@ public class ExpenseController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(
-            value = "/ocr",
-                consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(
-        summary = "OCR 이미지 처리",
-        description = "영수증/결제 알림 이미지를 업로드하여 금액, 날짜, 가맹점 정보를 자동으로 추출합니다. " +
-                      "현재는 Mock 데이터를 반환하며, 추후 Google Cloud Vision API로 교체 예정입니다."
-    )
+    @PostMapping(value = "/ocr", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "OCR 이미지 처리", description = "영수증/결제 알림 이미지를 업로드하여 금액, 날짜, 가맹점 정보를 자동으로 추출합니다. " +
+            "현재는 Mock 데이터를 반환하며, 추후 Google Cloud Vision API로 교체 예정입니다.")
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "OCR 처리 성공",
-            content = @Content(schema = @Schema(implementation = OcrResponse.class))
-        ),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청 (파일 형식 또는 크기 초과)"),
-        @ApiResponse(responseCode = "401", description = "인증 실패")
+            @ApiResponse(responseCode = "200", description = "OCR 처리 성공", content = @Content(schema = @Schema(implementation = OcrResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (파일 형식 또는 크기 초과)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
     })
     public ResponseEntity<OcrResponse> processOcr(
-            @Parameter(
-                    description = "업로드할 이미지 파일 (JPG, PNG)",
-                    required = true,
-                    schema = @Schema(type = "string", format = "binary")
-            )
-            @RequestPart("image") MultipartFile image,
+            @Parameter(description = "업로드할 이미지 파일 (JPG, PNG)", required = true, schema = @Schema(type = "string", format = "binary")) @RequestPart("image") MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         // 1. 파일 존재 확인
@@ -146,16 +149,16 @@ public class ExpenseController {
         // 3. 파일 형식 검증 (JPG, PNG만 허용)
         String contentType = image.getContentType();
         if (contentType == null ||
-            (!contentType.equals("image/jpeg") &&
-             !contentType.equals("image/png") &&
-             !contentType.equals("image/jpg"))) {
+                (!contentType.equals("image/jpeg") &&
+                        !contentType.equals("image/png") &&
+                        !contentType.equals("image/jpg"))) {
             throw new BusinessException("이미지 형식은 JPG 또는 PNG만 지원합니다");
         }
 
         // 4. OCR 처리
         OcrResponse response = ocrService.processImage(image);
         log.info("OCR processed for user: {}, filename: {}, size: {} bytes",
-                 userDetails.getUsername(), image.getOriginalFilename(), image.getSize());
+                userDetails.getUsername(), image.getOriginalFilename(), image.getSize());
 
         return ResponseEntity.ok(response);
     }
