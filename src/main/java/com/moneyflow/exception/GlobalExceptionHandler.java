@@ -22,12 +22,11 @@ import java.util.Map;
  *
  * 모든 예외를 JSON 형식으로 응답하여 API 클라이언트가 안정적으로 에러 처리 가능
  *
- * ⚠️ Order 설정:
- * - 낮은 우선순위(Ordered.LOWEST_PRECEDENCE)로 설정하여 Spring Boot 기본 핸들러가 먼저 동작
+ * ⚠️ basePackages 설정:
+ * - com.moneyflow 패키지의 컨트롤러에서 발생한 예외만 처리
  * - Actuator, Spring MVC 표준 응답(404, 405 등)이 정상 동작하도록 보장
  */
-@RestControllerAdvice
-@Order(Ordered.LOWEST_PRECEDENCE)
+@RestControllerAdvice(basePackages = "com.moneyflow")
 @Slf4j
 public class GlobalExceptionHandler {
 
