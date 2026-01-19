@@ -11,6 +11,7 @@ import com.moneyflow.dto.response.ExpenseResponse;
 import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.exception.UnauthorizedException;
 import com.moneyflow.service.CategoryClassifier;
+import com.moneyflow.service.RecurringExpenseMatchingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ExpenseService {
     private final UserRepository userRepository;
     private final AccountBookRepository accountBookRepository;
     private final CategoryClassifier categoryClassifier;
+    private final RecurringExpenseMatchingService matchingService;
 
     /**
      * 지출 생성
@@ -40,8 +42,8 @@ public class ExpenseService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 장부 ID가 제공된 경우 검증
-        AccountBook accountBook = null;
+        // 장부 ID가 제공된 경우 검증, 없으면 기본 장부 자동 할당
+        AccountBook accountBook;
         if (request.getAccountBookId() != null) {
             accountBook = accountBookRepository.findById(request.getAccountBookId())
                     .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
@@ -52,6 +54,13 @@ public class ExpenseService {
 
             if (!isMember) {
                 throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+            }
+        } else {
+            // 기본 장부 자동 할당
+            accountBook = accountBookRepository.findDefaultAccountBookByUserId(userId)
+                    .orElse(null);
+            if (accountBook != null) {
+                log.info("Auto-assigned default account book {} for expense", accountBook.getAccountBookId());
             }
         }
 
@@ -165,6 +174,12 @@ public class ExpenseService {
 
         if (!expense.getUser().getUserId().equals(userId)) {
             throw new UnauthorizedException("해당 지출 내역을 삭제할 권한이 없습니다");
+        }
+
+        // 연결된 고정비 결제가 있으면 PENDING으로 복원
+        if (expense.getLinkedPaymentId() != null) {
+            matchingService.unlinkPaymentByExpense(expenseId);
+            log.info("Unlinked payment for deleted expense: {}", expenseId);
         }
 
         expenseRepository.delete(expense);

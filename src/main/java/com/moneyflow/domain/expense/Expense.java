@@ -69,6 +69,12 @@ public class Expense {
     @Column(name = "is_auto_categorized")
     private Boolean isAutoCategorized = false;
 
+    /**
+     * 연결된 고정비 결제 ID (매칭 확정 시 설정)
+     */
+    @Column(name = "linked_payment_id")
+    private UUID linkedPaymentId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
