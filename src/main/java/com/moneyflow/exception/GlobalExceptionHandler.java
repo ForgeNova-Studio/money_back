@@ -5,7 +5,9 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,26 +20,24 @@ import java.util.Map;
 /**
  * 글로벌 예외 핸들러
  *
+ * 모든 예외를 JSON 형식으로 응답하여 API 클라이언트가 안정적으로 에러 처리 가능
+ *
  * ⚠️ Order 설정:
  * - 낮은 우선순위(Ordered.LOWEST_PRECEDENCE)로 설정하여 Spring Boot 기본 핸들러가 먼저 동작
  * - Actuator, Spring MVC 표준 응답(404, 405 등)이 정상 동작하도록 보장
- * - 이 핸들러는 비즈니스 로직 예외만 처리
  */
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
 @Slf4j
 public class GlobalExceptionHandler {
 
+    // ===== 비즈니스 예외 =====
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
         log.error("Business exception: {} ({})", ex.getMessage(), ex.getErrorCode().getCode());
         ErrorCode errorCode = ex.getErrorCode();
-        ErrorResponse error = new ErrorResponse(
-                errorCode.getHttpStatus().value(),
-                errorCode.getCode(),
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, errorCode.getHttpStatus());
+        return createErrorResponse(errorCode, ex.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -54,34 +54,35 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
         log.error("Unauthorized: {}", ex.getMessage());
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.FORBIDDEN.value(),
-                "ACCESS_DENIED",
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+        return createErrorResponse(ErrorCode.ACCESS_DENIED, ex.getMessage());
+    }
+
+    // ===== 인증/인가 예외 (Spring Security) =====
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        log.error("Access denied: {}", ex.getMessage());
+        return createErrorResponse(ErrorCode.ACCESS_DENIED);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        log.error("Authentication failed: {}", ex.getMessage());
+        return createErrorResponse(ErrorCode.AUTHENTICATION_ERROR);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException ex) {
         log.error("Bad credentials: {}", ex.getMessage());
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "A001",
-                "이메일 또는 비밀번호가 올바르지 않습니다",
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+        return createErrorResponse(ErrorCode.INVALID_CREDENTIALS);
     }
+
+    // ===== 요청 유효성 검증 예외 =====
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         log.error("Invalid argument: {}", ex.getMessage());
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "C001",
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        return createErrorResponse(ErrorCode.INVALID_INPUT, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -94,36 +95,52 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
+        ErrorCode errorCode = ErrorCode.VALIDATION_ERROR;
         ValidationErrorResponse errorResponse = new ValidationErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "C002",
-                "입력값 검증 실패",
+                errorCode.getHttpStatus().value(),
+                errorCode.getCode(),
+                errorCode.getMessage(),
                 LocalDateTime.now(),
                 errors);
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
     }
 
-    /**
-     * RuntimeException 처리 (애플리케이션 런타임 오류)
-     *
-     * ⚠️ Exception.class 대신 RuntimeException.class로 제한
-     * - Spring Boot/Actuator의 정상 응답(404, 405 등)을 방해하지 않음
-     * - 비즈니스 로직에서 발생한 예상치 못한 오류만 처리
-     * - Checked Exception은 컴파일 타임에 처리되므로 여기서 제외
-     */
+    // ===== 런타임 예외 (예상치 못한 오류) =====
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
         log.error("Unexpected runtime error: ", ex);
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "C003",
-                "서버 오류가 발생했습니다",
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        return createErrorResponse(ErrorCode.INTERNAL_ERROR);
     }
 
-    // Error response records
+    // ===== 최종 방어선: 모든 예외 처리 =====
+    // Checked Exception (IOException, SQLException 등) 포함
+    // 어떤 상황에서도 HTML 대신 JSON 응답 보장
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllException(Exception ex) {
+        log.error("Unhandled exception caught: ", ex);
+        return createErrorResponse(ErrorCode.INTERNAL_ERROR);
+    }
+
+    // ===== Helper Methods =====
+
+    private ResponseEntity<ErrorResponse> createErrorResponse(ErrorCode errorCode) {
+        return createErrorResponse(errorCode, errorCode.getMessage());
+    }
+
+    private ResponseEntity<ErrorResponse> createErrorResponse(ErrorCode errorCode, String message) {
+        ErrorResponse error = new ErrorResponse(
+                errorCode.getHttpStatus().value(),
+                errorCode.getCode(),
+                message,
+                LocalDateTime.now());
+        return new ResponseEntity<>(error, errorCode.getHttpStatus());
+    }
+
+    // ===== Response Records =====
+
     record ErrorResponse(int status, String code, String message, LocalDateTime timestamp) {
     }
 

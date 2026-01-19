@@ -16,7 +16,7 @@ public enum ErrorCode {
 
     // ===== 공통 (COMMON) =====
     INVALID_INPUT("C001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
-    MISSING_REQUIRED_FIELD("C002", "필수 필드가 누락되었습니다", HttpStatus.BAD_REQUEST),
+    VALIDATION_ERROR("C002", "입력값 검증에 실패했습니다", HttpStatus.BAD_REQUEST),
     INTERNAL_ERROR("C003", "서버 오류가 발생했습니다", HttpStatus.INTERNAL_SERVER_ERROR),
 
     // ===== 인증 (AUTH) =====
@@ -26,6 +26,7 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS("A004", "이미 사용 중인 이메일입니다", HttpStatus.CONFLICT),
     INVALID_OAUTH_TOKEN("A005", "유효하지 않은 소셜 로그인 토큰입니다", HttpStatus.UNAUTHORIZED),
     OAUTH_API_ERROR("A006", "소셜 로그인 서비스 오류가 발생했습니다", HttpStatus.BAD_GATEWAY),
+    AUTHENTICATION_ERROR("A007", "인증에 실패했습니다", HttpStatus.UNAUTHORIZED),
 
     // ===== 사용자 (USER) =====
     USER_NOT_FOUND("U001", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
