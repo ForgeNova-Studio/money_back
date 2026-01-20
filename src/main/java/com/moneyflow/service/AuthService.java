@@ -707,15 +707,21 @@ public class AuthService {
     public void logout(String refreshToken) {
         String tokenHash = hashToken(refreshToken);
 
-        RefreshToken refreshTokenEntity = refreshTokenRepository
-                .findByTokenHash(tokenHash)
-                .orElseThrow(() -> new BusinessException("유효하지 않은 Refresh Token입니다"));
+        // DB에 토큰이 없어도 에러를 발생시키지 않음 (이미 로그아웃 상태로 간주)
+        var tokenOptional = refreshTokenRepository.findByTokenHash(tokenHash);
 
-        refreshTokenEntity.revoke();
-        refreshTokenRepository.save(refreshTokenEntity);
+        if (tokenOptional.isPresent()) {
+            RefreshToken refreshTokenEntity = tokenOptional.get();
+            refreshTokenEntity.revoke();
+            refreshTokenRepository.save(refreshTokenEntity);
 
-        log.info("로그아웃: 사용자 {} ({})",
-                refreshTokenEntity.getUser().getEmail(),
-                refreshTokenEntity.getUser().getUserId());
+            log.info("로그아웃: 사용자 {} ({})",
+                    refreshTokenEntity.getUser().getEmail(),
+                    refreshTokenEntity.getUser().getUserId());
+        } else {
+            // 토큰이 없으면 로그 남기고 정상 처리 (DB 초기화 등의 경우)
+            log.warn("로그아웃 요청: 유효하지 않거나 이미 삭제된 Refresh Token (해시: {})",
+                    tokenHash.substring(0, Math.min(10, tokenHash.length())) + "...");
+        }
     }
 }
