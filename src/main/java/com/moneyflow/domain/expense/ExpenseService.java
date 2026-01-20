@@ -2,6 +2,7 @@ package com.moneyflow.domain.expense;
 
 import com.moneyflow.domain.accountbook.AccountBook;
 import com.moneyflow.domain.accountbook.AccountBookRepository;
+import com.moneyflow.domain.accountbook.FundingSource;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.ExpenseRequest;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
+    private final ExpenseParticipantRepository expenseParticipantRepository;
     private final UserRepository userRepository;
     private final AccountBookRepository accountBookRepository;
     private final CategoryClassifier categoryClassifier;
@@ -74,8 +77,20 @@ public class ExpenseService {
             log.info("Auto-classified merchant '{}' as category '{}'", request.getMerchant(), category);
         }
 
+        // paidBy 처리: 공용 지출이면 결제자 설정
+        User paidBy = null;
+        if (request.getFundingSource() == FundingSource.SHARED_POOL) {
+            if (request.getPaidByUserId() != null) {
+                paidBy = userRepository.findById(request.getPaidByUserId())
+                        .orElseThrow(() -> new ResourceNotFoundException("결제자를 찾을 수 없습니다"));
+            } else {
+                paidBy = user; // 결제자 미지정 시 등록자가 결제한 것으로 처리
+            }
+        }
+
         Expense expense = Expense.builder()
                 .user(user)
+                .paidBy(paidBy)
                 .accountBook(accountBook)
                 .fundingSource(request.getFundingSource())
                 .amount(request.getAmount())
@@ -89,6 +104,29 @@ public class ExpenseService {
                 .build();
 
         Expense savedExpense = expenseRepository.save(expense);
+
+        // 공용 지출이고 참여자가 지정된 경우 참여자 저장
+        if (request.getFundingSource() == FundingSource.SHARED_POOL
+                && request.getParticipants() != null
+                && !request.getParticipants().isEmpty()) {
+            List<ExpenseParticipant> participants = new ArrayList<>();
+            for (ExpenseRequest.ParticipantInfo info : request.getParticipants()) {
+                User participantUser = userRepository.findById(info.getUserId())
+                        .orElseThrow(() -> new ResourceNotFoundException("참여자를 찾을 수 없습니다: " + info.getUserId()));
+
+                ExpenseParticipant participant = ExpenseParticipant.builder()
+                        .id(new ExpenseParticipantId(savedExpense.getExpenseId(), info.getUserId()))
+                        .expense(savedExpense)
+                        .user(participantUser)
+                        .shareRatio(info.getShareRatio() != null ? info.getShareRatio() : BigDecimal.ONE)
+                        .build();
+                participants.add(participant);
+            }
+            expenseParticipantRepository.saveAll(participants);
+            savedExpense.setParticipants(participants);
+            log.info("Created {} participants for expense {}", participants.size(), savedExpense.getExpenseId());
+        }
+
         log.info("Created expense: {} linked to account book: {}", savedExpense.getExpenseId(),
                 accountBook != null ? accountBook.getAccountBookId() : "none");
 
