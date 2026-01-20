@@ -33,8 +33,13 @@ public class EmailService {
 
     /**
      * 6자리 랜덤 인증 코드 생성 (암호학적으로 안전)
+     * 테스트 모드에서는 고정 코드 "000000" 반환
      */
     public String generateVerificationCode() {
+        if (testMode) {
+            log.info("📧 [테스트 모드] 고정 인증 코드 사용: 000000");
+            return "000000";
+        }
         return String.format("%06d", secureRandom.nextInt(1000000));
     }
 
