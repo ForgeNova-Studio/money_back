@@ -15,14 +15,23 @@ import java.util.UUID;
 public interface AccountBookMemberRepository extends JpaRepository<AccountBookMember, AccountBookMemberId> {
 
     /**
-     * 장부의 모든 멤버 조회
+     * 장부의 모든 멤버 조회 (User JOIN FETCH)
+     * N+1 방지: getMembers()에서 member.getUser() 접근 시 추가 쿼리 방지
      */
-    List<AccountBookMember> findByAccountBookAccountBookId(UUID accountBookId);
+    @Query("SELECT m FROM AccountBookMember m " +
+            "JOIN FETCH m.user " +
+            "JOIN FETCH m.accountBook " +
+            "WHERE m.accountBook.accountBookId = :accountBookId")
+    List<AccountBookMember> findByAccountBookAccountBookId(@Param("accountBookId") UUID accountBookId);
 
     /**
-     * 사용자가 참여 중인 모든 멤버십 조회
+     * 사용자가 참여 중인 모든 멤버십 조회 (AccountBook JOIN FETCH)
      */
-    List<AccountBookMember> findByUserUserId(UUID userId);
+    @Query("SELECT m FROM AccountBookMember m " +
+            "JOIN FETCH m.user " +
+            "JOIN FETCH m.accountBook " +
+            "WHERE m.user.userId = :userId")
+    List<AccountBookMember> findByUserUserId(@Param("userId") UUID userId);
 
     /**
      * 특정 장부에서 사용자가 멤버인지 확인

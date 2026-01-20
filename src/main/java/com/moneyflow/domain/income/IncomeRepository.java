@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -18,15 +19,23 @@ import java.util.UUID;
 public interface IncomeRepository extends JpaRepository<Income, UUID> {
 
         /**
-         * 사용자별 기간별 수입 조회
-         *
-         * @param userId    사용자 ID
-         * @param startDate 시작 날짜
-         * @param endDate   종료 날짜
-         * @param source    수입 출처 (null이면 전체 조회)
-         * @return 조회된 수입 목록
+         * 수입 ID로 조회 (User, AccountBook JOIN FETCH)
+         * N+1 방지: toResponse()에서 user, accountBook 접근 시 추가 쿼리 방지
          */
-        @Query("SELECT i FROM Income i WHERE i.user.userId = :userId " +
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.incomeId = :incomeId")
+        Optional<Income> findByIdWithUserAndAccountBook(@Param("incomeId") UUID incomeId);
+
+        /**
+         * 사용자별 기간별 수입 조회 (User, AccountBook JOIN FETCH)
+         * N+1 방지: 리스트 순회 시 user, accountBook 접근
+         */
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.user.userId = :userId " +
                         "AND i.date BETWEEN :startDate AND :endDate " +
                         "AND (:source IS NULL OR i.source = :source) " +
                         "ORDER BY i.date DESC, i.createdAt DESC")
@@ -37,9 +46,12 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         @Param("source") String source);
 
         /**
-         * 장부별 기간별 수입 조회
+         * 장부별 기간별 수입 조회 (User, AccountBook JOIN FETCH)
          */
-        @Query("SELECT i FROM Income i WHERE i.accountBook.accountBookId = :accountBookId " +
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.accountBook.accountBookId = :accountBookId " +
                         "AND i.date BETWEEN :startDate AND :endDate " +
                         "AND (:source IS NULL OR i.source = :source) " +
                         "ORDER BY i.date DESC, i.createdAt DESC")
@@ -50,43 +62,52 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         @Param("source") String source);
 
         /**
-         * 장부별 모든 수입 조회
+         * 장부별 모든 수입 조회 (User, AccountBook JOIN FETCH)
          */
-        List<Income> findByAccountBook_AccountBookIdOrderByDateDescCreatedAtDesc(UUID accountBookId);
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.accountBook.accountBookId = :accountBookId " +
+                        "ORDER BY i.date DESC, i.createdAt DESC")
+        List<Income> findByAccountBookIdWithFetch(@Param("accountBookId") UUID accountBookId);
 
         /**
-         * 사용자별 최근 5개 수입 조회
-         *
-         * @param userId 사용자 ID
-         * @return 최근 수입 목록 (최대 5개)
+         * 사용자별 최근 5개 수입 조회 (User, AccountBook JOIN FETCH)
          */
-        List<Income> findTop5ByUserUserIdOrderByDateDescCreatedAtDesc(UUID userId);
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.user.userId = :userId " +
+                        "ORDER BY i.date DESC, i.createdAt DESC " +
+                        "LIMIT 5")
+        List<Income> findTop5ByUserUserIdOrderByDateDescCreatedAtDesc(@Param("userId") UUID userId);
 
         /**
          * 특정 수입이 사용자의 것인지 확인
-         *
-         * @param incomeId 수입 ID
-         * @param userId   사용자 ID
-         * @return 사용자의 수입이면 true
          */
         boolean existsByIncomeIdAndUserUserId(UUID incomeId, UUID userId);
 
         /**
          * 기간별 모든 수입 조회 (홈 화면 월간 데이터용)
-         *
-         * @param startDate 시작 날짜
-         * @param endDate   종료 날짜
-         * @return 조회된 수입 목록
          */
-        List<Income> findByDateBetween(LocalDate startDate, LocalDate endDate);
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.date BETWEEN :startDate AND :endDate")
+        List<Income> findByDateBetween(
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
 
         /**
          * 사용자별 기간 수입 조회 (홈 화면 월간 데이터용)
-         *
-         * @param userId    사용자 ID
-         * @param startDate 시작 날짜
-         * @param endDate   종료 날짜
-         * @return 조회된 수입 목록
          */
-        List<Income> findByUser_UserIdAndDateBetween(UUID userId, LocalDate startDate, LocalDate endDate);
+        @Query("SELECT i FROM Income i " +
+                        "LEFT JOIN FETCH i.user " +
+                        "LEFT JOIN FETCH i.accountBook " +
+                        "WHERE i.user.userId = :userId " +
+                        "AND i.date BETWEEN :startDate AND :endDate")
+        List<Income> findByUser_UserIdAndDateBetween(
+                        @Param("userId") UUID userId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
 }
