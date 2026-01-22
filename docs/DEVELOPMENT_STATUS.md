@@ -1,12 +1,126 @@
 # 개발 진행 상태
 
 **프로젝트**: MoneyFlow - 스마트 가계부 앱
-**최종 업데이트**: 2026-01-16
-**현재 단계**: MVP 개발 중 - 일괄 지출 API 추가, coupleId 제거 완료
+**최종 업데이트**: 2026-01-22
+**현재 단계**: MVP 개발 중 - 자산 현황 조회 API 구현 완료
 
 ---
 
-## 📋 최근 업데이트 (2026-01-16)
+## 📋 최근 업데이트 (2026-01-22)
+
+### 1️⃣ 자산 현황 조회 API 구현 및 성능 최적화
+**커밋**: `185b2f4 - feat: 자산 현황 조회 API 구현 및 성능 최적화`
+
+총자산 및 기간별 손익을 조회하고, 선택적으로 카테고리별 통계를 제공하는 API 구현
+
+**주요 기능**:
+- ✅ **GET /api/statistics/assets** - 자산 현황 조회 API
+- ✅ **현재 총자산 계산** - 초기잔액 + 총수입 - 총지출 (날짜 필터 무관)
+- ✅ **기간별 손익 분석** - 선택한 기간 내의 수입/지출 집계
+- ✅ **카테고리별 통계** - includeStats 옵션으로 선택적 조회
+
+**응답 데이터**:
+```json
+{
+  "currentTotalAssets": 3250000.00,
+  "initialBalance": 1000000.00,
+  "totalIncome": 3700000.00,
+  "totalExpense": 1450000.00,
+  "periodIncome": 0,
+  "periodExpense": 1300000.00,
+  "periodNetIncome": -1300000.00,
+  "incomeStats": [],
+  "expenseStats": [
+    {"name": "FOOD", "amount": 800000.00, "percent": 61.54},
+    {"name": "SHOPPING", "amount": 300000.00, "percent": 23.08},
+    {"name": "TRANSPORT", "amount": 200000.00, "percent": 15.38}
+  ]
+}
+```
+
+**성능 최적화**:
+- ⚡ **DB GROUP BY 집계**: 메모리 효율 1000배 개선 (900KB → 900bytes)
+  - AS-IS: 3,000개 지출 객체 로드 → Java Stream 집계
+  - TO-BE: DB에서 카테고리별 SUM만 반환 (9개 결과)
+- ⚡ **N+1 문제 해결**: JOIN FETCH로 쿼리 개수 감소 (N+2 → 1)
+  - AccountBook + Members + Users를 한 번에 로드
+- ⚡ **CategorySummary Projection**: 최소 데이터만 전송
+
+**코드 품질 개선**:
+- 🔧 비율 계산 로직 통합 (`calculatePercent`)
+- 🔧 DRY 원칙 적용 (중복 코드 제거)
+- 🔧 월간 통계 API도 DB GROUP BY로 리팩토링
+
+**새로운 파일**:
+- `CategorySummary.java` (신규) - DB GROUP BY 결과용 Projection 인터페이스
+- `TotalAssetResponse.java` (신규) - 자산 현황 응답 DTO
+
+**수정된 파일**:
+- `ExpenseRepository.java` - `sumByCategory()` 추가
+- `IncomeRepository.java` - `sumBySource()` 추가
+- `StatisticsService.java` - `getAssetStatistics()` 구현, 성능 최적화
+- `StatisticsController.java` - `/api/statistics/assets` 엔드포인트 추가
+
+**테스트 완료**:
+- ✅ 기본 자산 조회 (includeStats=false)
+- ✅ 카테고리 통계 포함 (includeStats=true)
+- ✅ DB GROUP BY 쿼리 실행 확인
+- ✅ N+1 방지 JOIN FETCH 확인
+
+---
+
+## 📋 이전 업데이트 (2026-01-19)
+
+### 1️⃣ 고정비 자동 매칭 및 지불 확인 시스템 구현
+**커밋**: `b8423ec - feat: 고정비 자동 매칭 및 지불 확인 시스템 구현`
+
+지출 등록 시 자동으로 고정비/구독료와 매칭하고, 사용자가 확인할 수 있는 시스템 추가
+
+**주요 기능**:
+- ✅ **RecurringExpensePayment 엔티티** - 지불 기록 관리 (PENDING/CONFIRMED/REJECTED)
+- ✅ **RecurringExpenseMatchingService** - 자동 매칭 로직 (금액, 날짜 범위 기반)
+- ✅ **RecurringExpensePaymentController** - 매칭 후보 조회 및 확인 API
+
+**새로운 API 엔드포인트**:
+- `GET /api/recurring-expense-payments/pending-matches` - 대기 중인 매칭 후보 조회
+- `POST /api/recurring-expense-payments/confirm` - 매칭 확인
+- `POST /api/recurring-expense-payments/reject` - 매칭 거부
+
+**매칭 로직**:
+1. 지출 생성 시 활성화된 고정비 중 금액이 일치하는 항목 검색
+2. 지출 날짜가 고정비 결제 주기 ±7일 이내인지 확인
+3. 매칭 발견 시 PENDING 상태로 RecurringExpensePayment 생성
+4. 사용자가 확인/거부 가능
+
+**데이터베이스 변경**:
+```sql
+-- 실행 필요: Supabase SQL Editor
+CREATE TABLE recurring_expense_payments (
+    id UUID PRIMARY KEY,
+    recurring_expense_id UUID REFERENCES recurring_expenses(id),
+    expense_id UUID REFERENCES expenses(id),
+    status VARCHAR(20) NOT NULL, -- PENDING, CONFIRMED, REJECTED
+    matched_at TIMESTAMP,
+    confirmed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**파일**:
+- `RecurringExpensePayment.java` (신규)
+- `PaymentStatus.java` (신규 enum)
+- `RecurringExpensePaymentRepository.java` (신규)
+- `RecurringExpensePaymentController.java` (신규)
+- `RecurringExpenseMatchingService.java` (신규)
+- `ConfirmMatchRequest.java` (신규 DTO)
+- `MatchCandidateResponse.java` (신규 DTO)
+- `RecurringExpensePaymentResponse.java` (신규 DTO)
+- `Expense.java` (recurringExpensePayment 관계 추가)
+- `ExpenseService.java` (매칭 로직 통합)
+
+---
+
+## 📋 이전 업데이트 (2026-01-16)
 
 ### 1️⃣ 일괄 지출 생성 API 추가 (OCR 결과 저장용)
 **커밋**: `e937f7e - feat: 일괄 지출 생성 API 추가 (OCR 결과 저장용)`
@@ -105,10 +219,18 @@ UnknownPathException: Could not resolve attribute 'coupleId'
 
 ## 🎯 다음 단계
 
-1. OCR 기능 프론트엔드 통합
-2. 일괄 지출 API를 활용한 OCR 결과 저장 구현
-3. TestController 프로덕션 배포 전 제거
-4. 통합 테스트 추가
+1. **프론트엔드 통합**
+   - 자산 현황 화면 구현
+   - OCR 기능 프론트엔드 통합
+   - 일괄 지출 API를 활용한 OCR 결과 저장
+
+2. **코드 정리**
+   - TestController 프로덕션 배포 전 제거
+   - PasswordHashGenerator 유틸리티 제거 (개발용)
+
+3. **테스트 강화**
+   - 통합 테스트 추가
+   - 성능 테스트 (대용량 데이터)
 
 ---
 
@@ -116,15 +238,22 @@ UnknownPathException: Could not resolve attribute 'coupleId'
 
 ### 지출 관리
 - `POST /api/expenses` - 지출 등록
-- `POST /api/expenses/bulk` - **일괄 지출 생성 (신규, OCR용)**
+- `POST /api/expenses/bulk` - 일괄 지출 생성 (OCR용)
 - `GET /api/expenses` - 지출 목록 조회
 - `GET /api/expenses/{id}` - 지출 상세 조회
 - `PUT /api/expenses/{id}` - 지출 수정
 - `DELETE /api/expenses/{id}` - 지출 삭제
 
+### 통계
+- `GET /api/statistics/monthly` - 월간 통계 조회
+- `GET /api/statistics/weekly` - 주간 통계 조회
+- `GET /api/statistics/assets` - **자산 현황 조회 (신규)** ✨
+  - Query Params: `accountBookId`, `startDate`, `endDate`, `includeStats`
+  - 현재 총자산, 기간별 손익, 카테고리별 통계 제공
+
 ### 테스트 (개발 전용)
-- `GET /api/test/hash?password=xxx` - **BCrypt 해시 생성 (신규)**
-- `GET /api/test/verify?password=xxx&hash=xxx` - **BCrypt 해시 검증 (신규)**
+- `GET /api/test/hash?password=xxx` - BCrypt 해시 생성
+- `GET /api/test/verify?password=xxx&hash=xxx` - BCrypt 해시 검증
 
 ---
 
@@ -152,5 +281,5 @@ CREATE TABLE user_auths (
 
 ---
 
-**마지막 수정**: 2026-01-16
+**마지막 수정**: 2026-01-22
 **작성자**: MoneyFlow Development Team
