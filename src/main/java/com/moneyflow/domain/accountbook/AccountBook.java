@@ -91,6 +91,14 @@ public class AccountBook {
     private Boolean isActive = true;
 
     /**
+     * 초기 잔액 (장부 시작 시 보유 금액)
+     * 총자산 계산: 초기잔액 + 총수입 - 총지출
+     */
+    @Builder.Default
+    @Column(name = "initial_balance", precision = 15, scale = 2)
+    private java.math.BigDecimal initialBalance = java.math.BigDecimal.ZERO;
+
+    /**
      * 장부 생성자
      */
     @ManyToOne(fetch = FetchType.LAZY)
