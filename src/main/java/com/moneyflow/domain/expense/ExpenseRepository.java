@@ -1,5 +1,6 @@
 package com.moneyflow.domain.expense;
 
+import com.moneyflow.dto.projection.CategorySummary;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -115,6 +116,42 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
                         "AND e.date BETWEEN :startDate AND :endDate")
         List<Expense> findByUser_UserIdAndDateBetween(
                         @Param("userId") UUID userId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        // ==================== 자산 현황 계산용 ====================
+
+        /**
+         * [총자산용] 장부별 전체 지출 합계 (조건 없는 누적)
+         */
+        @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.accountBook.accountBookId = :bookId")
+        java.math.BigDecimal sumTotalAmount(@Param("bookId") UUID bookId);
+
+        /**
+         * [기간 분석용] 장부별 특정 기간 내 지출 합계
+         */
+        @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
+                        "WHERE e.accountBook.accountBookId = :bookId " +
+                        "AND e.date BETWEEN :startDate AND :endDate")
+        java.math.BigDecimal sumAmountByPeriod(
+                        @Param("bookId") UUID bookId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * [카테고리별 집계] 장부별 기간 내 카테고리별 지출 합계 (DB GROUP BY)
+         *
+         * Java 메모리 연산 대신 DB에서 직접 집계하여 성능 최적화
+         * 예: 3,000건 지출 → 9개 카테고리 결과만 반환
+         */
+        @Query("SELECT e.category AS name, SUM(e.amount) AS amount " +
+                        "FROM Expense e " +
+                        "WHERE e.accountBook.accountBookId = :bookId " +
+                        "AND e.date BETWEEN :startDate AND :endDate " +
+                        "GROUP BY e.category " +
+                        "ORDER BY SUM(e.amount) DESC")
+        List<CategorySummary> sumByCategory(
+                        @Param("bookId") UUID bookId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
 }

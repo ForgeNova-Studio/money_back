@@ -1,5 +1,6 @@
 package com.moneyflow.domain.income;
 
+import com.moneyflow.dto.projection.CategorySummary;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -108,6 +109,42 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         "AND i.date BETWEEN :startDate AND :endDate")
         List<Income> findByUser_UserIdAndDateBetween(
                         @Param("userId") UUID userId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        // ==================== 자산 현황 계산용 ====================
+
+        /**
+         * [총자산용] 장부별 전체 수입 합계 (조건 없는 누적)
+         */
+        @Query("SELECT COALESCE(SUM(i.amount), 0) FROM Income i WHERE i.accountBook.accountBookId = :bookId")
+        java.math.BigDecimal sumTotalAmount(@Param("bookId") UUID bookId);
+
+        /**
+         * [기간 분석용] 장부별 특정 기간 내 수입 합계
+         */
+        @Query("SELECT COALESCE(SUM(i.amount), 0) FROM Income i " +
+                        "WHERE i.accountBook.accountBookId = :bookId " +
+                        "AND i.date BETWEEN :startDate AND :endDate")
+        java.math.BigDecimal sumAmountByPeriod(
+                        @Param("bookId") UUID bookId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * [출처별 집계] 장부별 기간 내 수입 출처별 합계 (DB GROUP BY)
+         *
+         * Java 메모리 연산 대신 DB에서 직접 집계하여 성능 최적화
+         * 예: 1,000건 수입 → 5개 출처 결과만 반환
+         */
+        @Query("SELECT i.source AS name, SUM(i.amount) AS amount " +
+                        "FROM Income i " +
+                        "WHERE i.accountBook.accountBookId = :bookId " +
+                        "AND i.date BETWEEN :startDate AND :endDate " +
+                        "GROUP BY i.source " +
+                        "ORDER BY SUM(i.amount) DESC")
+        List<CategorySummary> sumBySource(
+                        @Param("bookId") UUID bookId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
 }
