@@ -1,5 +1,6 @@
 package com.moneyflow.domain.budget;
 
+import com.moneyflow.domain.accountbook.AccountBook;
 import com.moneyflow.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +16,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "budgets", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "year", "month"})
+        @UniqueConstraint(columnNames = {"account_book_id", "year", "month"})
 })
 @Getter
 @Setter
@@ -32,6 +33,10 @@ public class Budget {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_book_id", nullable = false)
+    private AccountBook accountBook;
 
     @Column(nullable = false)
     private Integer year;

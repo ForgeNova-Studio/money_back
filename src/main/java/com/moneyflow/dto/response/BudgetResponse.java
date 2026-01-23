@@ -20,6 +20,7 @@ public class BudgetResponse {
 
     private UUID budgetId;
     private UUID userId;
+    private UUID accountBookId;
     private Integer year;
     private Integer month;
     private BigDecimal targetAmount;

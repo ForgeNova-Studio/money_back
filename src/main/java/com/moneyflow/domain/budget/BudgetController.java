@@ -39,14 +39,20 @@ public class BudgetController {
     }
 
     @GetMapping
-    @Operation(summary = "특정 년월의 예산 조회")
+    @Operation(summary = "특정 가계부의 특정 년월 예산 조회")
     public ResponseEntity<BudgetResponse> getBudget(
+            @RequestParam UUID accountBookId,
             @RequestParam Integer year,
             @RequestParam Integer month,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         UUID userId = UUID.fromString(userDetails.getUsername());
-        BudgetResponse response = budgetService.getBudget(userId, year, month);
+        BudgetResponse response = budgetService.getBudget(userId, accountBookId, year, month);
+
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+
         return ResponseEntity.ok(response);
     }
 

@@ -13,9 +13,9 @@ import java.util.UUID;
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
 
     /**
-     * 사용자의 특정 년월 예산 조회
+     * 가계부의 특정 년월 예산 조회
      */
-    Optional<Budget> findByUserUserIdAndYearAndMonth(UUID userId, Integer year, Integer month);
+    Optional<Budget> findByAccountBookAccountBookIdAndYearAndMonth(UUID accountBookId, Integer year, Integer month);
 
     /**
      * 특정 예산이 사용자의 것인지 확인

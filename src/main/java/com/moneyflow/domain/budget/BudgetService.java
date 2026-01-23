@@ -1,5 +1,7 @@
 package com.moneyflow.domain.budget;
 
+import com.moneyflow.domain.accountbook.AccountBook;
+import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.expense.Expense;
 import com.moneyflow.domain.expense.ExpenseRepository;
 import com.moneyflow.domain.user.User;
@@ -30,6 +32,7 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final UserRepository userRepository;
+    private final AccountBookRepository accountBookRepository;
     private final ExpenseRepository expenseRepository;
 
     /**
@@ -41,24 +44,33 @@ public class BudgetService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
 
+        // 가계부 조회 및 권한 검증
+        AccountBook accountBook = accountBookRepository.findById(request.getAccountBookId())
+                .orElseThrow(() -> new ResourceNotFoundException("가계부를 찾을 수 없습니다"));
+
+        if (!accountBook.isMember(userId)) {
+            throw new UnauthorizedException("해당 가계부에 접근할 권한이 없습니다");
+        }
+
         // 기존 예산이 있는지 확인
-        Budget budget = budgetRepository.findByUserUserIdAndYearAndMonth(
-                        userId, request.getYear(), request.getMonth())
+        Budget budget = budgetRepository.findByAccountBookAccountBookIdAndYearAndMonth(
+                        request.getAccountBookId(), request.getYear(), request.getMonth())
                 .orElse(null);
 
         if (budget != null) {
             // 기존 예산 업데이트
             budget.setTargetAmount(request.getTargetAmount());
-            log.info("Updated budget for user {} - {}/{}", userId, request.getYear(), request.getMonth());
+            log.info("Updated budget for account book {} - {}/{}", request.getAccountBookId(), request.getYear(), request.getMonth());
         } else {
             // 새 예산 생성
             budget = Budget.builder()
                     .user(user)
+                    .accountBook(accountBook)
                     .year(request.getYear())
                     .month(request.getMonth())
                     .targetAmount(request.getTargetAmount())
                     .build();
-            log.info("Created budget for user {} - {}/{}", userId, request.getYear(), request.getMonth());
+            log.info("Created budget for account book {} - {}/{}", request.getAccountBookId(), request.getYear(), request.getMonth());
         }
 
         Budget savedBudget = budgetRepository.save(budget);
@@ -70,8 +82,16 @@ public class BudgetService {
      * 예산이 없으면 null 반환 (예산이 없는 것은 정상 상태)
      */
     @Transactional(readOnly = true)
-    public BudgetResponse getBudget(UUID userId, Integer year, Integer month) {
-        Budget budget = budgetRepository.findByUserUserIdAndYearAndMonth(userId, year, month)
+    public BudgetResponse getBudget(UUID userId, UUID accountBookId, Integer year, Integer month) {
+        // 가계부 권한 검증
+        AccountBook accountBook = accountBookRepository.findById(accountBookId)
+                .orElseThrow(() -> new ResourceNotFoundException("가계부를 찾을 수 없습니다"));
+
+        if (!accountBook.isMember(userId)) {
+            throw new UnauthorizedException("해당 가계부에 접근할 권한이 없습니다");
+        }
+
+        Budget budget = budgetRepository.findByAccountBookAccountBookIdAndYearAndMonth(accountBookId, year, month)
                 .orElse(null);
 
         if (budget == null) {
@@ -106,9 +126,9 @@ public class BudgetService {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        // 해당 월의 총 지출 계산
-        List<Expense> expenses = expenseRepository.findExpensesByUserAndDateRange(
-                budget.getUser().getUserId(), startDate, endDate, null);
+        // 해당 가계부의 해당 월 총 지출 계산
+        List<Expense> expenses = expenseRepository.findByAccountBookAndDateRange(
+                budget.getAccountBook().getAccountBookId(), startDate, endDate, null);
 
         BigDecimal currentSpending = expenses.stream()
                 .map(Expense::getAmount)
@@ -129,6 +149,7 @@ public class BudgetService {
         return BudgetResponse.builder()
                 .budgetId(budget.getBudgetId())
                 .userId(budget.getUser().getUserId())
+                .accountBookId(budget.getAccountBook().getAccountBookId())
                 .year(budget.getYear())
                 .month(budget.getMonth())
                 .targetAmount(budget.getTargetAmount())

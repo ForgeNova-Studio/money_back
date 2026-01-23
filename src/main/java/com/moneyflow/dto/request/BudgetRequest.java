@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * 예산 생성/수정 요청 DTO
@@ -16,6 +17,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class BudgetRequest {
+
+    @NotNull(message = "가계부 ID는 필수입니다")
+    private UUID accountBookId;
 
     @NotNull(message = "년도는 필수입니다")
     @Min(value = 2020, message = "년도는 2020년 이상이어야 합니다")
