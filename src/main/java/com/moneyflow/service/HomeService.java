@@ -69,12 +69,13 @@ public class HomeService {
                 totalExpense += expense.getAmount().longValue();
 
                 transactionDtos.add(TransactionDto.builder()
-                        .id(expense.getExpenseId().toString()) // UUID를 String으로 변환
+                        .id(expense.getExpenseId().toString())
                         .type("EXPENSE")
                         .amount(expense.getAmount().longValue())
                         .title(expense.getMerchant() != null ? expense.getMerchant() : expense.getCategory())
                         .category(expense.getCategory())
-                        .time("") // time 필드가 없으므로 빈 문자열
+                        .memo(expense.getMemo())
+                        .time("")
                         .build());
             }
 
@@ -84,12 +85,13 @@ public class HomeService {
                 totalIncome += income.getAmount().longValue();
 
                 transactionDtos.add(TransactionDto.builder()
-                        .id(income.getIncomeId().toString()) // UUID를 String으로 변환
+                        .id(income.getIncomeId().toString())
                         .type("INCOME")
                         .amount(income.getAmount().longValue())
-                        .title(income.getSource())
+                        .title(income.getDescription() != null ? income.getDescription() : income.getSource())
                         .category(income.getSource())
-                        .time("") // time 필드가 없으므로 빈 문자열
+                        .memo(null)
+                        .time("")
                         .build());
             }
 
