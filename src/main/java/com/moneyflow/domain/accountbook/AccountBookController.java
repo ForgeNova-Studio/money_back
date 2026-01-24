@@ -42,119 +42,152 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AccountBookController {
 
-    private final AccountBookService accountBookService;
+        private final AccountBookService accountBookService;
 
-    /**
-     * 장부 생성
-     */
-    @Operation(summary = "장부 생성", description = "커플 생활비, 여행 등 새 장부를 생성합니다")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "생성 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-            @ApiResponse(responseCode = "401", description = "인증 실패")
-    })
-    @PostMapping
-    public ResponseEntity<AccountBookResponse> createAccountBook(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody CreateAccountBookRequest request) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        AccountBookResponse response = accountBookService.createAccountBook(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+        /**
+         * 장부 생성
+         */
+        @Operation(summary = "장부 생성", description = "커플 생활비, 여행 등 새 장부를 생성합니다")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "201", description = "생성 성공"),
+                        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패")
+        })
+        @PostMapping
+        public ResponseEntity<AccountBookResponse> createAccountBook(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @Valid @RequestBody CreateAccountBookRequest request) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                AccountBookResponse response = accountBookService.createAccountBook(userId, request);
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
 
-    /**
-     * 내 장부 목록 조회
-     */
-    @Operation(summary = "내 장부 목록", description = "사용자가 참여 중인 장부 목록을 조회합니다")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 실패")
-    })
-    @GetMapping
-    public ResponseEntity<List<AccountBookResponse>> getMyAccountBooks(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        List<AccountBookResponse> response = accountBookService.getMyAccountBooks(userId);
-        return ResponseEntity.ok(response);
-    }
+        /**
+         * 내 장부 목록 조회
+         */
+        @Operation(summary = "내 장부 목록", description = "사용자가 참여 중인 장부 목록을 조회합니다")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "조회 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패")
+        })
+        @GetMapping
+        public ResponseEntity<List<AccountBookResponse>> getMyAccountBooks(
+                        @AuthenticationPrincipal UserDetails userDetails) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                List<AccountBookResponse> response = accountBookService.getMyAccountBooks(userId);
+                return ResponseEntity.ok(response);
+        }
 
-    /**
-     * 장부 상세 조회
-     */
-    @Operation(summary = "장부 상세 조회", description = "장부의 상세 정보를 조회합니다")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 실패"),
-            @ApiResponse(responseCode = "404", description = "장부 없음")
-    })
-    @GetMapping("/{accountBookId}")
-    public ResponseEntity<AccountBookResponse> getAccountBook(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID accountBookId) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        AccountBookResponse response = accountBookService.getAccountBook(userId, accountBookId);
-        return ResponseEntity.ok(response);
-    }
+        /**
+         * 장부 상세 조회
+         */
+        @Operation(summary = "장부 상세 조회", description = "장부의 상세 정보를 조회합니다")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "조회 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패"),
+                        @ApiResponse(responseCode = "404", description = "장부 없음")
+        })
+        @GetMapping("/{accountBookId}")
+        public ResponseEntity<AccountBookResponse> getAccountBook(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                AccountBookResponse response = accountBookService.getAccountBook(userId, accountBookId);
+                return ResponseEntity.ok(response);
+        }
 
-    /**
-     * 장부 멤버 목록 조회
-     */
-    @Operation(summary = "장부 멤버 목록", description = "장부의 멤버 목록을 조회합니다")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 실패 또는 권한 없음"),
-            @ApiResponse(responseCode = "404", description = "장부 없음")
-    })
-    @GetMapping("/{accountBookId}/members")
-    public ResponseEntity<List<AccountBookResponse.MemberInfo>> getMembers(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID accountBookId) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        List<AccountBookResponse.MemberInfo> members = accountBookService.getMembers(userId, accountBookId);
-        return ResponseEntity.ok(members);
-    }
+        /**
+         * 장부 멤버 목록 조회
+         */
+        @Operation(summary = "장부 멤버 목록", description = "장부의 멤버 목록을 조회합니다")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "조회 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패 또는 권한 없음"),
+                        @ApiResponse(responseCode = "404", description = "장부 없음")
+        })
+        @GetMapping("/{accountBookId}/members")
+        public ResponseEntity<List<AccountBookResponse.MemberInfo>> getMembers(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                List<AccountBookResponse.MemberInfo> members = accountBookService.getMembers(userId, accountBookId);
+                return ResponseEntity.ok(members);
+        }
 
-    /**
-     * 멤버 추가
-     */
-    @Operation(summary = "멤버 추가", description = "장부에 새 멤버를 추가합니다 (OWNER만 가능)")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "추가 성공"),
-            @ApiResponse(responseCode = "400", description = "이미 멤버임"),
-            @ApiResponse(responseCode = "401", description = "인증 실패"),
-            @ApiResponse(responseCode = "403", description = "권한 없음")
-    })
-    @PostMapping("/{accountBookId}/members")
-    public ResponseEntity<Map<String, String>> addMember(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID accountBookId,
-            @RequestParam UUID newMemberId) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        accountBookService.addMember(accountBookId, userId, newMemberId);
+        /**
+         * 멤버 추가
+         */
+        @Operation(summary = "멤버 추가", description = "장부에 새 멤버를 추가합니다 (OWNER만 가능)")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "추가 성공"),
+                        @ApiResponse(responseCode = "400", description = "이미 멤버임"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패"),
+                        @ApiResponse(responseCode = "403", description = "권한 없음")
+        })
+        @PostMapping("/{accountBookId}/members")
+        public ResponseEntity<Map<String, String>> addMember(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId,
+                        @RequestParam UUID newMemberId) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                accountBookService.addMember(accountBookId, userId, newMemberId);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "멤버가 추가되었습니다");
-        return ResponseEntity.ok(response);
-    }
+                Map<String, String> response = new HashMap<>();
+                response.put("message", "멤버가 추가되었습니다");
+                return ResponseEntity.ok(response);
+        }
 
-    /**
-     * 장부 비활성화 (삭제)
-     */
-    @Operation(summary = "장부 비활성화", description = "장부를 비활성화합니다 (OWNER만 가능)")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "삭제 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 실패"),
-            @ApiResponse(responseCode = "403", description = "권한 없음")
-    })
-    @DeleteMapping("/{accountBookId}")
-    public ResponseEntity<Map<String, String>> deactivateAccountBook(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID accountBookId) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        accountBookService.deactivateAccountBook(userId, accountBookId);
+        /**
+         * 장부 비활성화 (삭제)
+         */
+        @Operation(summary = "장부 비활성화", description = "장부를 비활성화합니다 (OWNER만 가능)")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "삭제 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패"),
+                        @ApiResponse(responseCode = "403", description = "권한 없음")
+        })
+        @DeleteMapping("/{accountBookId}")
+        public ResponseEntity<Map<String, String>> deactivateAccountBook(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                accountBookService.deactivateAccountBook(userId, accountBookId);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "장부가 삭제되었습니다");
-        return ResponseEntity.ok(response);
-    }
+                Map<String, String> response = new HashMap<>();
+                response.put("message", "장부가 삭제되었습니다");
+                return ResponseEntity.ok(response);
+        }
+
+        /**
+         * 초기 잔액 수정
+         */
+        @Operation(summary = "초기 잔액 수정", description = "장부의 초기 잔액을 수정합니다")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "수정 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 실패"),
+                        @ApiResponse(responseCode = "403", description = "권한 없음"),
+                        @ApiResponse(responseCode = "404", description = "장부 없음")
+        })
+        @PatchMapping("/{accountBookId}/initial-balance")
+        public ResponseEntity<Map<String, Object>> updateInitialBalance(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId,
+                        @RequestBody Map<String, Object> request) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+
+                Object initialBalanceObj = request.get("initialBalance");
+                java.math.BigDecimal initialBalance;
+                if (initialBalanceObj instanceof Number) {
+                        initialBalance = java.math.BigDecimal.valueOf(((Number) initialBalanceObj).doubleValue());
+                } else {
+                        initialBalance = new java.math.BigDecimal(initialBalanceObj.toString());
+                }
+
+                accountBookService.updateInitialBalance(userId, accountBookId, initialBalance);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "초기 잔액이 수정되었습니다");
+                response.put("initialBalance", initialBalance);
+                return ResponseEntity.ok(response);
+        }
 }
