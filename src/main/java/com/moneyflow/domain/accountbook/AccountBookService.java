@@ -110,7 +110,7 @@ public class AccountBookService {
                 }
 
                 AccountBook accountBook = AccountBook.builder()
-                                .name("내 가계부")
+                                .name("나의 가계부")
                                 .bookType(BookType.DEFAULT)
                                 .memberCount(1)
                                 .description("기본 가계부")
