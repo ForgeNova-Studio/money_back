@@ -210,6 +210,47 @@ public class AccountBookService {
         }
 
         /**
+         * 장부 정보 수정
+         */
+        @Transactional
+        public AccountBookResponse updateAccountBook(UUID userId, UUID accountBookId,
+                        com.moneyflow.dto.request.UpdateAccountBookRequest request) {
+                AccountBook accountBook = accountBookRepository.findById(accountBookId)
+                                .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
+
+                if (!accountBook.isOwner(userId)) {
+                        throw new UnauthorizedException("장부를 수정할 권한이 없습니다");
+                }
+
+                if (request.getName() != null && !request.getName().isBlank()) {
+                        accountBook.setName(request.getName());
+                }
+                if (request.getDescription() != null) {
+                        accountBook.setDescription(request.getDescription());
+                }
+                if (request.getMemberCount() != null && request.getMemberCount() > 0) {
+                        accountBook.setMemberCount(request.getMemberCount());
+                }
+                if (request.getStartDate() != null) {
+                        accountBook.setStartDate(request.getStartDate());
+                }
+                if (request.getEndDate() != null) {
+                        accountBook.setEndDate(request.getEndDate());
+                }
+
+                // 날짜 유효성 검사
+                if (accountBook.getStartDate() != null && accountBook.getEndDate() != null
+                                && accountBook.getEndDate().isBefore(accountBook.getStartDate())) {
+                        throw new BusinessException("종료일은 시작일보다 빠를 수 없습니다");
+                }
+
+                accountBookRepository.save(accountBook);
+                log.info("장부 수정 완료: accountBookId={}", accountBookId);
+
+                return toResponse(accountBook);
+        }
+
+        /**
          * 장부 멤버 목록 조회
          */
         @Transactional(readOnly = true)

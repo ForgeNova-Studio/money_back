@@ -137,6 +137,16 @@ public class AccountBookController {
                 return ResponseEntity.ok(response);
         }
 
+        @PutMapping("/{accountBookId}")
+        public ResponseEntity<AccountBookResponse> updateAccountBook(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @PathVariable UUID accountBookId,
+                        @Valid @RequestBody com.moneyflow.dto.request.UpdateAccountBookRequest request) {
+                UUID userId = UUID.fromString(userDetails.getUsername());
+                AccountBookResponse response = accountBookService.updateAccountBook(userId, accountBookId, request);
+                return ResponseEntity.ok(response);
+        }
+
         /**
          * 장부 비활성화 (삭제)
          */
