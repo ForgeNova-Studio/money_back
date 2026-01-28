@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -158,10 +159,28 @@ public class CoupleService {
         Couple couple = coupleRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("커플 정보를 찾을 수 없습니다"));
 
+        // 커플 가계부 비활성화 (데이터 보존)
+        deactivateCoupleAccountBooks(couple);
+
         // 커플 삭제
         coupleRepository.delete(couple);
 
         log.info("커플 연동 해제 완료: userId={}, coupleId={}", userId, couple.getCoupleId());
+    }
+
+    /**
+     * 커플 연동 해제 시 커플 가계부 비활성화
+     * 데이터는 보존하고 isActive만 false로 변경
+     */
+    private void deactivateCoupleAccountBooks(Couple couple) {
+        List<AccountBook> coupleAccountBooks = accountBookRepository
+                .findByCouple_CoupleIdAndIsActiveTrue(couple.getCoupleId());
+
+        for (AccountBook accountBook : coupleAccountBooks) {
+            accountBook.deactivate();
+            accountBookRepository.save(accountBook);
+            log.info("커플 가계부 비활성화: accountBookId={}", accountBook.getAccountBookId());
+        }
     }
 
     /**
