@@ -44,7 +44,7 @@ public class Budget {
     @Column(nullable = false)
     private Integer month;
 
-    @Column(name = "target_amount", nullable = false, precision = 12, scale = 2)
+    @Column(name = "target_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal targetAmount;
 
     @CreationTimestamp
