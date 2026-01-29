@@ -45,6 +45,9 @@ public enum ErrorCode {
     // ===== 고정비 (RECURRING) =====
     RECURRING_EXPENSE_NOT_FOUND("R001", "고정비를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
 
+    // ===== 자산 (ASSET) =====
+    ASSET_NOT_FOUND("AS001", "자산을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+
     // ===== 커플 (COUPLE) =====
     COUPLE_NOT_FOUND("CP001", "커플 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     ALREADY_COUPLED("CP002", "이미 커플이 연결되어 있습니다", HttpStatus.CONFLICT);
