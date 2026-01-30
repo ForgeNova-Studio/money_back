@@ -42,6 +42,7 @@ public class AssetRequest {
      */
     @NotNull(message = "금액은 필수입니다")
     @DecimalMin(value = "0.0", message = "금액은 0 이상이어야 합니다")
+    @DecimalMax(value = "9999999999999", message = "금액은 1조 미만이어야 합니다")
     private BigDecimal amount;
 
     /**
