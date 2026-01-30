@@ -7,7 +7,8 @@ import com.moneyflow.domain.income.IncomeRepository;
 import com.moneyflow.domain.accountbook.AccountBookMemberRepository;
 import com.moneyflow.dto.response.DailySummaryDto;
 import com.moneyflow.dto.response.TransactionDto;
-import com.moneyflow.exception.UnauthorizedException;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +35,7 @@ public class HomeService {
 
         if (!accountBookMemberRepository
                 .existsByAccountBookAccountBookIdAndUserUserId(accountBookId, userId)) {
-            throw new UnauthorizedException("장부의 멤버만 조회할 수 있습니다");
+            throw new BusinessException(ErrorCode.ACCOUNT_BOOK_ACCESS_DENIED);
         }
 
         // 2. 한 달 치 데이터 한 번에 조회 (DB 쿼리 2회)
