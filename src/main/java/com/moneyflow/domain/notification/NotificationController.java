@@ -72,4 +72,19 @@ public class NotificationController {
         long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(Map.of("count", count));
     }
+
+    @PostMapping("/send-all")
+    @Operation(summary = "전체 사용자에게 알림 발송 (관리자용)")
+    public ResponseEntity<Map<String, Object>> sendNotificationToAll(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody NotificationRequest request) {
+
+        UUID adminId = UUID.fromString(userDetails.getUsername());
+        int sentCount = notificationService.sendNotificationToAll(adminId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "sentCount", sentCount,
+                "message", sentCount + "명에게 알림이 전송되었습니다"));
+    }
 }

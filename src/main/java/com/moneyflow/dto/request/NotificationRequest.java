@@ -1,7 +1,6 @@
 package com.moneyflow.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +18,7 @@ import java.util.UUID;
 @Builder
 public class NotificationRequest {
 
-    @NotNull(message = "수신자 ID는 필수입니다")
+    // 특정 사용자 알림 시 필요, 전체 알림(send-all) 시 null 허용
     private UUID targetUserId;
 
     @NotBlank(message = "제목은 필수입니다")
