@@ -25,9 +25,10 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final OneSignalService oneSignalService;
 
     /**
-     * 알림 생성 (관리자용)
+     * 알림 생성 (관리자용 - 특정 사용자)
      */
     @Transactional
     public NotificationResponse createNotification(NotificationRequest request) {
@@ -43,6 +44,17 @@ public class NotificationService {
 
         Notification saved = notificationRepository.save(notification);
         log.info("Created notification for user {}: {}", request.getTargetUserId(), saved.getNotificationId());
+
+        // OneSignal 푸시 발송
+        try {
+            // targetUsreId (UUID)를 String으로 변환하여 전달
+            oneSignalService.sendNotification(
+                    request.getTitle(),
+                    request.getMessage(),
+                    java.util.List.of(targetUser.getUserId().toString()));
+        } catch (Exception e) {
+            log.error("Failed to trigger push notification", e);
+        }
 
         return toResponse(saved);
     }
@@ -113,6 +125,14 @@ public class NotificationService {
         }
 
         log.info("Admin {} sent notification to all users: {} notifications", adminId, sentCount);
+
+        // OneSignal 전체 발송 (세그먼트 이용)
+        try {
+            oneSignalService.sendNotificationToAll(request.getTitle(), request.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to trigger push notification to all", e);
+        }
+
         return sentCount;
     }
 
