@@ -50,7 +50,7 @@ public class BudgetController {
         BudgetResponse response = budgetService.getBudget(userId, accountBookId, year, month);
 
         if (response == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.ok().build();
         }
 
         return ResponseEntity.ok(response);
