@@ -76,6 +76,6 @@ oauth:
 # OneSignal 설정
 onesignal:
   # Flutter Frontend에서 사용하는 App ID와 동일해야 함
-  app-id: ${ONESIGNAL_APP_ID:d4c0efab-ecfb-4bb5-a649-082b8a78957b}
+  app-id: ${ONESIGNAL_APP_ID:}
   # OneSignal 대시보드에서 발급받은 REST API Key
-  api-key: ${ONESIGNAL_REST_API_KEY:os_v2_app_2tao7k7m7nf3ljsjbavyu6evpnc2iab2hs5ez24ilzlzh3qmch7ogj3ip3zr5krc2ayxtpadgdxcuxzd7bta5cvb5pfnuo75dte24ra}
+  api-key: ${ONESIGNAL_REST_API_KEY}
