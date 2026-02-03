@@ -143,7 +143,9 @@ public class NotificationService {
     private boolean isAdmin(String email) {
         // TODO: 관리자 목록을 DB나 설정 파일에서 관리하도록 변경 가능
         java.util.List<String> adminEmails = java.util.List.of(
-                "hanwoolc95@gmail.com");
+                "hanwoolc95@gmail.com",
+                "th82602662@gmail.com",
+                "th8260@naver.com");
         return email != null && adminEmails.contains(email.toLowerCase());
     }
 
