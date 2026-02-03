@@ -1,5 +1,6 @@
 package com.moneyflow.domain.statistics;
 
+import com.moneyflow.dto.response.CategoryMonthlyComparisonResponse;
 import com.moneyflow.dto.response.MonthlyStatisticsResponse;
 import com.moneyflow.dto.response.TotalAssetResponse;
 import com.moneyflow.dto.response.WeeklyStatisticsResponse;
@@ -45,6 +46,21 @@ public class StatisticsController {
             @AuthenticationPrincipal UserDetails userDetails) {
         UUID userId = UUID.fromString(userDetails.getUsername());
         MonthlyStatisticsResponse response = statisticsService.getMonthlyStatistics(userId, year, month, accountBookId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 카테고리별 전월 대비 변화 조회
+     */
+    @GetMapping("/monthly/category-comparison")
+    @Operation(summary = "카테고리별 전월 대비 변화 조회", description = "각 지출 카테고리별로 전월 대비 증감을 조회합니다")
+    public ResponseEntity<CategoryMonthlyComparisonResponse> getCategoryMonthlyComparison(
+            @Parameter(description = "년도", example = "2026") @RequestParam int year,
+            @Parameter(description = "월 (1-12)", example = "1") @RequestParam int month,
+            @Parameter(description = "장부 ID (null이면 기본 장부)") @RequestParam(required = false) UUID accountBookId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUsername());
+        CategoryMonthlyComparisonResponse response = statisticsService.getCategoryMonthlyComparison(userId, year, month, accountBookId);
         return ResponseEntity.ok(response);
     }
 

@@ -6,6 +6,8 @@ import com.moneyflow.domain.expense.Expense;
 import com.moneyflow.domain.expense.ExpenseRepository;
 import com.moneyflow.domain.income.IncomeRepository;
 import com.moneyflow.dto.projection.CategorySummary;
+import com.moneyflow.dto.response.CategoryMonthlyComparisonResponse;
+import com.moneyflow.dto.response.CategoryMonthlyComparisonResponse.CategoryComparison;
 import com.moneyflow.dto.response.MonthlyStatisticsResponse;
 import com.moneyflow.dto.response.MonthlyStatisticsResponse.CategoryBreakdown;
 import com.moneyflow.dto.response.MonthlyStatisticsResponse.ComparisonData;
@@ -168,6 +170,94 @@ public class StatisticsService {
                                 .dailyExpenses(dailyExpenses)
                                 .topCategory(topCategory)
                                 .averageDaily(averageDaily)
+                                .build();
+        }
+
+        /**
+         * 카테고리별 전월 대비 변화 조회
+         *
+         * @param userId        사용자 ID
+         * @param year          년도
+         * @param month         월 (1-12)
+         * @param accountBookId 장부 ID (null이면 기본 장부)
+         * @return 카테고리별 전월 대비 변화 정보
+         */
+        public CategoryMonthlyComparisonResponse getCategoryMonthlyComparison(UUID userId, int year, int month, UUID accountBookId) {
+                // 장부 확인 및 권한 검증
+                AccountBook accountBook = getAndValidateAccountBook(userId, accountBookId);
+                UUID bookId = accountBook.getAccountBookId();
+
+                // 이번 달 기간
+                LocalDate currentStart = LocalDate.of(year, month, 1);
+                LocalDate currentEnd = currentStart.plusMonths(1).minusDays(1);
+
+                // 전월 기간
+                LocalDate previousStart = currentStart.minusMonths(1);
+                LocalDate previousEnd = previousStart.plusMonths(1).minusDays(1);
+
+                // 이번 달 / 전월 카테고리별 집계 (DB GROUP BY)
+                List<CategorySummary> currentSummaries = expenseRepository.sumByCategory(bookId, currentStart, currentEnd);
+                List<CategorySummary> previousSummaries = expenseRepository.sumByCategory(bookId, previousStart, previousEnd);
+
+                // 전월 데이터를 Map으로 변환 (O(1) lookup)
+                Map<String, BigDecimal> previousMap = previousSummaries.stream()
+                                .collect(Collectors.toMap(CategorySummary::getName, CategorySummary::getAmount));
+
+                // 이번 달 데이터를 Map으로 변환 (전월에만 있는 카테고리 처리용)
+                Set<String> currentCategories = currentSummaries.stream()
+                                .map(CategorySummary::getName)
+                                .collect(Collectors.toSet());
+
+                // 카테고리별 비교 리스트 생성 (이번 달에 있는 카테고리)
+                List<CategoryComparison> comparisons = new ArrayList<>();
+
+                for (CategorySummary current : currentSummaries) {
+                        BigDecimal currentAmount = current.getAmount();
+                        BigDecimal previousAmount = previousMap.getOrDefault(current.getName(), BigDecimal.ZERO);
+                        comparisons.add(buildCategoryComparison(current.getName(), currentAmount, previousAmount));
+                }
+
+                // 전월에만 있고 이번 달에 없는 카테고리 추가
+                for (CategorySummary previous : previousSummaries) {
+                        if (!currentCategories.contains(previous.getName())) {
+                                comparisons.add(buildCategoryComparison(previous.getName(), BigDecimal.ZERO, previous.getAmount()));
+                        }
+                }
+
+                // 이번 달 금액 기준 내림차순 정렬
+                comparisons.sort((a, b) -> b.getCurrentAmount().compareTo(a.getCurrentAmount()));
+
+                // 총 지출 계산
+                BigDecimal currentTotal = expenseRepository.sumAmountByPeriod(bookId, currentStart, currentEnd);
+                BigDecimal previousTotal = expenseRepository.sumAmountByPeriod(bookId, previousStart, previousEnd);
+
+                return CategoryMonthlyComparisonResponse.builder()
+                                .accountBookId(bookId)
+                                .accountBookName(accountBook.getName())
+                                .year(year)
+                                .month(month)
+                                .currentMonthTotal(currentTotal)
+                                .previousMonthTotal(previousTotal)
+                                .categories(comparisons)
+                                .build();
+        }
+
+        /**
+         * 카테고리별 비교 데이터 생성
+         */
+        private CategoryComparison buildCategoryComparison(String category, BigDecimal currentAmount, BigDecimal previousAmount) {
+                BigDecimal diff = currentAmount.subtract(previousAmount);
+                Double diffPercentage = null;
+                if (previousAmount.compareTo(BigDecimal.ZERO) != 0) {
+                        diffPercentage = diff.divide(previousAmount, 4, RoundingMode.HALF_UP)
+                                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+                }
+                return CategoryComparison.builder()
+                                .category(category)
+                                .currentAmount(currentAmount)
+                                .previousAmount(previousAmount)
+                                .diff(diff)
+                                .diffPercentage(diffPercentage)
                                 .build();
         }
 
