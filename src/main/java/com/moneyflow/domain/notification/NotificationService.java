@@ -32,8 +32,9 @@ public class NotificationService {
      */
     @Transactional
     public NotificationResponse createNotification(NotificationRequest request) {
-        User targetUser = userRepository.findById(request.getTargetUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("수신자를 찾을 수 없습니다"));
+        User targetUser = userRepository.findByEmail(request.getTargetEmail())
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("해당 이메일의 사용자를 찾을 수 없습니다: " + request.getTargetEmail()));
 
         Notification notification = Notification.builder()
                 .user(targetUser)
@@ -43,7 +44,7 @@ public class NotificationService {
                 .build();
 
         Notification saved = notificationRepository.save(notification);
-        log.info("Created notification for user {}: {}", request.getTargetUserId(), saved.getNotificationId());
+        log.info("Created notification for user {}: {}", request.getTargetEmail(), saved.getNotificationId());
 
         // OneSignal 푸시 발송
         try {
