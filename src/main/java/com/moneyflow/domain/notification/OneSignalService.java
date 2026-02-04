@@ -31,6 +31,15 @@ public class OneSignalService {
      */
     @Async
     public void sendNotification(String title, String message, List<String> targetExternalUserIds) {
+        sendNotification(title, message, targetExternalUserIds, "NOTICE", null);
+    }
+
+    /**
+     * 특정 사용자들에게 알림 발송 (타입 및 알림 ID 포함)
+     */
+    @Async
+    public void sendNotification(String title, String message, List<String> targetExternalUserIds,
+            String type, String notificationId) {
         if (targetExternalUserIds == null || targetExternalUserIds.isEmpty()) {
             return;
         }
@@ -41,6 +50,14 @@ public class OneSignalService {
             body.put("contents", Map.of("en", message)); // 영어/한글 구분 없이 내용을 contents에 넣음
             body.put("headings", Map.of("en", title));
             body.put("include_external_user_ids", targetExternalUserIds);
+
+            // 앱에서 분기 처리를 위한 추가 데이터
+            Map<String, Object> data = new HashMap<>();
+            data.put("type", type != null ? type : "NOTICE");
+            if (notificationId != null) {
+                data.put("notificationId", notificationId);
+            }
+            body.put("data", data);
 
             // Channel ID (Android 8.0+) - 중요도 높음 등 설정 가능
             // body.put("android_channel_id", "...");
@@ -62,14 +79,12 @@ public class OneSignalService {
             body.put("app_id", oneSignalConfig.getAppId());
             body.put("contents", Map.of("en", message));
             body.put("headings", Map.of("en", title));
-            body.put("included_segments", List.of("AllUsers")); // OneSignal 기본 세그먼트 이름 확인 필요 (보통 'All' 또는 'Subscribed
-                                                                // Users')
-                                                                // OneSignal V5부터는 'All' 지원 안 할 수도 있음 -> 'Subscribed
-                                                                // Users' 확인
-                                                                // 문서상 'included_segments': ["All"] 사용 가능.
-
-            // 안전하게 'Subscribed Users' 세그먼트 사용 권장하지만, 기본은 'All' 시도
             body.put("included_segments", List.of("All"));
+
+            // 앱에서 분기 처리를 위한 추가 데이터
+            Map<String, Object> data = new HashMap<>();
+            data.put("type", "NOTICE");
+            body.put("data", data);
 
             log.info("Sending OneSignal notification to ALL users");
             sendRequest(body);
