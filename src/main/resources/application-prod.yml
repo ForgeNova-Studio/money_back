@@ -1,0 +1,95 @@
+spring:
+  datasource:
+    # Supabase (prod, pooled)
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+server:
+  port: ${PORT:8080}
+
+logging:
+  level:
+    com.moneyflow: INFO
+    root: WARN
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity: 3600000  # 1시간
+  refresh-token-validity: 2592000000  # 30일
+
+# OneSignal 설정
+onesignal:
+  # Flutter Frontend에서 사용하는 App ID와 동일해야 함
+  app-id: ${ONESIGNAL_APP_ID:}
+  # OneSignal 대시보드에서 발급받은 REST API Key
+  api-key: ${ONESIGNAL_REST_API_KEY}
+
+# Resend 이메일 설정
+resend:
+  api-key: ${RESEND_API_KEY}
+
+email:
+  verification:
+    code-length: 6
+    expiry-minutes: 10
+    from-address: ${EMAIL_FROM}
+    from-name: MoneyFlow
+
+# 파일 업로드 설정
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:/app/uploads/ocr}
+
+# CORS 설정
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://app.moneyflow.com,https://www.moneyflow.com}
+
+# OAuth 설정
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    ios-client-id: ${GOOGLE_IOS_CLIENT_ID}
+  apple:
+    service-id: ${APPLE_SERVICE_ID}
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+
+# Sentry 에러 모니터링 (프로덕션 전용)
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: production
+  release: ${APP_VERSION:1.0.0}
+  server-name: moneyflow-api
+  # 무료 플랜 최적화
+  traces-sample-rate: 0.1        # 10% 트랜잭션 샘플링 (성능 모니터링)
+  sample-rate: 1.0               # 에러는 100% 캡쳐
+  send-default-pii: false        # 민감 정보 전송 안함
+  # 무시할 예외 (4xx 에러 등 - 정상 동작)
+  ignored-exceptions-for-type:
+    - org.springframework.web.servlet.NoHandlerFoundException
+    - org.springframework.security.access.AccessDeniedException
+    - org.springframework.security.authentication.BadCredentialsException
+    - org.springframework.security.authentication.InsufficientAuthenticationException
+    - org.springframework.security.core.AuthenticationException
+    - io.jsonwebtoken.ExpiredJwtException
+    - io.jsonwebtoken.MalformedJwtException
+    - io.jsonwebtoken.security.SignatureException

@@ -45,6 +45,12 @@ public class SentryConfig {
     @Bean
     public SentryOptions.BeforeSendCallback beforeSendCallback() {
         return (event, hint) -> {
+            // 불필요한 에러 필터링
+            if (isIgnorableError(event)) {
+                log.debug("[Sentry] Ignorable error filtered: {}", event.getEventId());
+                return null;
+            }
+
             // 중복 에러 필터링
             if (isDuplicateError(event)) {
                 log.debug("[Sentry] Duplicate error filtered: {}", event.getEventId());
@@ -56,6 +62,50 @@ public class SentryConfig {
 
             return event;
         };
+    }
+
+    /**
+     * 무시해야 할 에러 체크 (JWT 만료, 인증 관련 등)
+     */
+    private boolean isIgnorableError(SentryEvent event) {
+        String message = "";
+
+        if (event.getThrowable() != null) {
+            message = event.getThrowable().getMessage();
+            if (message == null) {
+                message = event.getThrowable().getClass().getSimpleName();
+            }
+        } else if (event.getMessage() != null) {
+            message = event.getMessage().getFormatted();
+        }
+
+        if (message == null) return false;
+
+        String lowerMessage = message.toLowerCase();
+
+        // JWT 관련 에러 (정상적인 토큰 만료/갱신 흐름)
+        if (lowerMessage.contains("expired jwt") ||
+            lowerMessage.contains("jwt expired") ||
+            lowerMessage.contains("token expired") ||
+            lowerMessage.contains("invalid jwt")) {
+            return true;
+        }
+
+        // 인증/인가 에러 (클라이언트 측 문제)
+        if (lowerMessage.contains("unauthorized") ||
+            lowerMessage.contains("access denied") ||
+            lowerMessage.contains("authentication failed")) {
+            return true;
+        }
+
+        // 클라이언트 요청 에러 (4xx)
+        if (lowerMessage.contains("bad request") ||
+            lowerMessage.contains("validation failed") ||
+            lowerMessage.contains("method not allowed")) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
