@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -59,6 +60,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      * @param userId 사용자 ID
      * @return 무효화된 토큰 개수
      */
+    @Transactional
     @Modifying
     @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.user.userId = :userId AND rt.revoked = false")
     int revokeAllByUserId(@Param("userId") UUID userId);
@@ -69,6 +71,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      * @param now 현재 시간
      * @return 삭제된 토큰 개수
      */
+    @Transactional
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :now")
     int deleteExpiredTokens(@Param("now") LocalDateTime now);
