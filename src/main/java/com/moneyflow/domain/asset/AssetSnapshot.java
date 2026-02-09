@@ -4,6 +4,8 @@ import com.moneyflow.domain.accountbook.AccountBook;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +37,7 @@ public class AssetSnapshot {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_book_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private AccountBook accountBook;
 
     /**
