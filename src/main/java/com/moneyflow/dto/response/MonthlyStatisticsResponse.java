@@ -70,7 +70,7 @@ public class MonthlyStatisticsResponse {
         /**
          * 전체 지출 대비 비율 (0-100)
          */
-        private int percentage;
+        private double percentage;
     }
 
     /**

@@ -49,7 +49,7 @@ public class MonthlyReportResponse {
     public static class CategoryBreakdown {
         private String category;
         private BigDecimal amount;
-        private Integer percentage;
+        private Double percentage;
     }
 
     @Data

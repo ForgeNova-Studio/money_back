@@ -73,7 +73,7 @@ public class StatisticsService {
                                 .map(summary -> CategoryBreakdown.builder()
                                                 .category(summary.getName())
                                                 .amount(summary.getAmount())
-                                                .percentage(calculatePercentage(summary.getAmount(), totalAmount))
+                                                .percentage(calculatePercent(summary.getAmount(), totalAmount))
                                                 .build())
                                 .collect(Collectors.toList());
 
@@ -313,16 +313,6 @@ public class StatisticsService {
         }
 
         /**
-         * 비율 계산 (int 반환 - 하위 호환성)
-         *
-         * @deprecated Use {@link #calculatePercent(BigDecimal, BigDecimal)} instead
-         */
-        @Deprecated
-        private int calculatePercentage(BigDecimal amount, BigDecimal total) {
-                return (int) calculatePercent(amount, total);
-        }
-
-        /**
          * 자산 현황 조회
          *
          * @param userId        사용자 ID
@@ -386,10 +376,10 @@ public class StatisticsService {
         /**
          * 수입 출처별 통계 계산 (DB GROUP BY 사용)
          *
-         * @param bookId       장부 ID
-         * @param startDate    시작일
-         * @param endDate      종료일
-         * @param totalAmount  총 수입 금액
+         * @param bookId      장부 ID
+         * @param startDate   시작일
+         * @param endDate     종료일
+         * @param totalAmount 총 수입 금액
          * @return 수입 출처별 통계 리스트 (금액 기준 내림차순)
          */
         private List<TotalAssetResponse.CategoryStat> calculateIncomeStats(
@@ -411,10 +401,10 @@ public class StatisticsService {
         /**
          * 지출 카테고리별 통계 계산 (DB GROUP BY 사용)
          *
-         * @param bookId       장부 ID
-         * @param startDate    시작일
-         * @param endDate      종료일
-         * @param totalAmount  총 지출 금액
+         * @param bookId      장부 ID
+         * @param startDate   시작일
+         * @param endDate     종료일
+         * @param totalAmount 총 지출 금액
          * @return 지출 카테고리별 통계 리스트 (금액 기준 내림차순)
          */
         private List<TotalAssetResponse.CategoryStat> calculateExpenseStats(
