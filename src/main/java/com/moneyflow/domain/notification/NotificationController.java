@@ -42,13 +42,14 @@ public class NotificationController {
     }
 
     @GetMapping
-    @Operation(summary = "내 알림 목록 조회")
+    @Operation(summary = "내 알림 목록 조회", description = "days 파라미터로 최근 N일 이내 알림만 조회 가능 (예: days=7)")
     public ResponseEntity<Page<NotificationResponse>> getNotifications(
             @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Integer days,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         UUID userId = UUID.fromString(userDetails.getUsername());
-        Page<NotificationResponse> notifications = notificationService.getNotifications(userId, pageable);
+        Page<NotificationResponse> notifications = notificationService.getNotifications(userId, days, pageable);
         return ResponseEntity.ok(notifications);
     }
 

@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -61,10 +62,19 @@ public class NotificationService {
     }
 
     /**
-     * 내 알림 목록 조회 (페이징)
+     * 내 알림 목록 조회 (페이징 + 일수 필터)
+     *
+     * @param userId   사용자 ID
+     * @param days     최근 N일 이내 알림만 조회 (null이면 전체 조회)
+     * @param pageable 페이징 정보
      */
     @Transactional(readOnly = true)
-    public Page<NotificationResponse> getNotifications(UUID userId, Pageable pageable) {
+    public Page<NotificationResponse> getNotifications(UUID userId, Integer days, Pageable pageable) {
+        if (days != null && days > 0) {
+            LocalDateTime after = LocalDateTime.now().minusDays(days);
+            return notificationRepository.findAllByUserUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, after, pageable)
+                    .map(this::toResponse);
+        }
         return notificationRepository.findAllByUserUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::toResponse);
     }
