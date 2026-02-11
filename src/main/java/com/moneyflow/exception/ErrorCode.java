@@ -27,6 +27,7 @@ public enum ErrorCode {
     INVALID_OAUTH_TOKEN("A005", "유효하지 않은 소셜 로그인 토큰입니다", HttpStatus.UNAUTHORIZED),
     OAUTH_API_ERROR("A006", "소셜 로그인 서비스 오류가 발생했습니다", HttpStatus.BAD_GATEWAY),
     AUTHENTICATION_ERROR("A007", "인증에 실패했습니다", HttpStatus.UNAUTHORIZED),
+    EMAIL_REGISTERED_WITH_OTHER_PROVIDER("A008", "이 이메일은 다른 로그인 방법으로 가입되어 있습니다", HttpStatus.CONFLICT),
 
     // ===== 사용자 (USER) =====
     USER_NOT_FOUND("U001", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

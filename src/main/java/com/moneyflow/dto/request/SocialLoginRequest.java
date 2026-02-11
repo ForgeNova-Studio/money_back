@@ -28,4 +28,7 @@ public class SocialLoginRequest {
 
     @Schema(description = "닉네임 (신규 가입 시 사용, 선택)", example = "홍길동")
     private String nickname;
+
+    @Schema(description = "이메일 (SDK에서 받은 이메일, 선택 - 백엔드에서 못 받을 경우 사용)", example = "user@example.com")
+    private String email;
 }

@@ -22,6 +22,7 @@ import com.moneyflow.dto.response.RegisterResponse;
 import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.exception.UnauthorizedException;
 import com.moneyflow.security.JwtTokenProvider;
@@ -44,6 +45,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -203,6 +205,11 @@ public class AuthService {
                 if (name == null) {
                     name = userInfo.nickname();
                 }
+                // 카카오 API에서 이메일을 못 받았지만 SDK에서 받은 이메일이 있으면 사용
+                if ((email == null || email.isBlank()) && request.getEmail() != null && !request.getEmail().isBlank()) {
+                    email = request.getEmail();
+                    log.info("카카오 API에서 이메일 없음 - SDK 이메일 사용: {}", email);
+                }
             } else {
                 throw new BusinessException("지원하지 않는 로그인 제공자입니다");
             }
@@ -215,8 +222,19 @@ public class AuthService {
             // 기존 사용자 없음 → 자동 회원가입
             if (existingAuth == null) {
                 // 이메일로 다른 provider의 기존 사용자가 있는지 확인
-                if (userRepository.existsByEmail(email)) {
-                    throw new BusinessException("이미 다른 방법으로 가입된 이메일입니다");
+                if (email != null && !email.isBlank() && userRepository.existsByEmail(email)) {
+                    // 기존 사용자의 로그인 방법 조회
+                    User existingUser = userRepository.findByEmail(email).orElse(null);
+                    if (existingUser != null) {
+                        List<UserAuth> existingAuths = userAuthRepository.findByUser(existingUser);
+                        String providers = existingAuths.stream()
+                                .map(auth -> auth.getProvider().name())
+                                .collect(java.util.stream.Collectors.joining(", "));
+                        throw new BusinessException(
+                                "이 이메일은 " + providers + " 로그인으로 가입되어 있습니다. 해당 방법으로 로그인해주세요.",
+                                ErrorCode.EMAIL_REGISTERED_WITH_OTHER_PROVIDER);
+                    }
+                    throw new BusinessException("이미 다른 방법으로 가입된 이메일입니다", ErrorCode.EMAIL_ALREADY_EXISTS);
                 }
 
                 // 닉네임이 없으면 이메일 앞부분 사용
@@ -243,6 +261,28 @@ public class AuthService {
                 log.info("소셜 로그인으로 새로운 사용자 등록: {} ({})", email, request.getProvider());
             } else {
                 user = existingAuth.getUser();
+                // 기존 사용자의 이메일이 비어있고, 새로 받은 이메일이 있으면 업데이트
+                if ((user.getEmail() == null || user.getEmail().isBlank()) && email != null && !email.isBlank()) {
+                    // 이메일 중복 체크 후 업데이트
+                    if (!userRepository.existsByEmail(email)) {
+                        user.setEmail(email);
+                        userRepository.save(user);
+                        log.info("기존 사용자 이메일 업데이트: {}", email);
+                    } else {
+                        // 이메일이 다른 계정에서 사용 중 - 기존 로그인 방법 안내
+                        User otherUser = userRepository.findByEmail(email).orElse(null);
+                        if (otherUser != null) {
+                            List<UserAuth> otherAuths = userAuthRepository.findByUser(otherUser);
+                            String providers = otherAuths.stream()
+                                    .map(auth -> auth.getProvider().name())
+                                    .collect(java.util.stream.Collectors.joining(", "));
+                            throw new BusinessException(
+                                    "이 이메일은 " + providers + " 로그인으로 가입되어 있습니다. 해당 방법으로 로그인해주세요.",
+                                    ErrorCode.EMAIL_REGISTERED_WITH_OTHER_PROVIDER);
+                        }
+                        log.warn("이메일 업데이트 실패 - 이미 사용 중인 이메일: {}", email);
+                    }
+                }
                 log.info("소셜 로그인: {} ({})", user.getEmail(), request.getProvider());
             }
 
