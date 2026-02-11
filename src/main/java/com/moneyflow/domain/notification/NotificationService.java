@@ -4,6 +4,8 @@ import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.NotificationRequest;
 import com.moneyflow.dto.response.NotificationResponse;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +36,11 @@ public class NotificationService {
     @Transactional
     public NotificationResponse createNotification(NotificationRequest request) {
         User targetUser = userRepository.findByEmail(request.getTargetEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("해당 이메일의 사용자를 찾을 수 없습니다: " + request.getTargetEmail()));
+                .orElseThrow(() -> {
+                    log.warn("Target user not found for notification: {}", request.getTargetEmail());
+                    return new BusinessException("해당 이메일의 사용자를 찾을 수 없습니다: " + request.getTargetEmail(),
+                            ErrorCode.INVALID_INPUT);
+                });
 
         Notification notification = Notification.builder()
                 .user(targetUser)
@@ -72,7 +77,8 @@ public class NotificationService {
     public Page<NotificationResponse> getNotifications(UUID userId, Integer days, Pageable pageable) {
         if (days != null && days > 0) {
             LocalDateTime after = LocalDateTime.now().minusDays(days);
-            return notificationRepository.findAllByUserUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, after, pageable)
+            return notificationRepository
+                    .findAllByUserUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, after, pageable)
                     .map(this::toResponse);
         }
         return notificationRepository.findAllByUserUserIdOrderByCreatedAtDesc(userId, pageable)

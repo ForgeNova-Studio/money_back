@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         log.error("Resource not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
-                "NOT_FOUND",
+                ErrorCode.USER_NOT_FOUND.getCode(),
                 ex.getMessage(),
                 LocalDateTime.now());
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllException(Exception ex) {
-        log.error("Unhandled exception caught: ", ex);
+        log.error("Unhandled exception caught (General): ", ex);
         return createErrorResponse(ErrorCode.INTERNAL_ERROR);
     }
 

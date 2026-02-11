@@ -28,8 +28,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException, ServletException {
+            HttpServletResponse response,
+            AuthenticationException authException) throws IOException, ServletException {
 
         log.error("Unauthorized error: {}", authException.getMessage());
 
@@ -38,6 +38,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         Map<String, Object> body = new HashMap<>();
         body.put("status", HttpStatus.UNAUTHORIZED.value());
+        body.put("code", "A007"); // ErrorCode.AUTHENTICATION_ERROR
         body.put("message", "인증 정보가 올바르지 않습니다");
         body.put("timestamp", LocalDateTime.now().toString());
 
