@@ -58,7 +58,7 @@ public class NotificationService {
             oneSignalService.sendNotification(
                     request.getTitle(),
                     request.getMessage(),
-                    java.util.List.of(targetUser.getUserId().toString()));
+                    java.util.List.of(targetUser.getEmail()));
         } catch (Exception e) {
             log.error("Failed to trigger push notification", e);
         }
