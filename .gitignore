@@ -38,4 +38,5 @@ application-local.yml
 .DS_Store
 server.log
 application-dev.yml
+application-prod.yml
 .env
