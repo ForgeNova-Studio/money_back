@@ -2,7 +2,6 @@ package com.moneyflow.domain.budget;
 
 import com.moneyflow.domain.accountbook.AccountBook;
 import com.moneyflow.domain.accountbook.AccountBookRepository;
-import com.moneyflow.domain.expense.Expense;
 import com.moneyflow.domain.expense.ExpenseRepository;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
@@ -19,7 +18,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -109,7 +107,7 @@ public class BudgetService {
         Budget budget = budgetRepository.findById(budgetId)
                 .orElseThrow(() -> new ResourceNotFoundException("예산을 찾을 수 없습니다"));
 
-        if (!budget.getUser().getUserId().equals(userId)) {
+        if (!budget.getAccountBook().isMember(userId)) {
             throw new UnauthorizedException("해당 예산을 삭제할 권한이 없습니다");
         }
 
@@ -126,13 +124,9 @@ public class BudgetService {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        // 해당 가계부의 해당 월 총 지출 계산
-        List<Expense> expenses = expenseRepository.findByAccountBookAndDateRange(
-                budget.getAccountBook().getAccountBookId(), startDate, endDate, null);
-
-        BigDecimal currentSpending = expenses.stream()
-                .map(Expense::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 해당 가계부의 해당 월 총 지출 계산 (DB SUM 집계)
+        BigDecimal currentSpending = expenseRepository.sumAmountByPeriod(
+                budget.getAccountBook().getAccountBookId(), startDate, endDate);
 
         // 남은 금액 계산
         BigDecimal remainingAmount = budget.getTargetAmount().subtract(currentSpending);
