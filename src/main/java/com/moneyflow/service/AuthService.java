@@ -59,7 +59,6 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final GoogleOAuthService googleOAuthService;
-    private final AppleOAuthService appleOAuthService;
     private final NaverOAuthService naverOAuthService;
     private final KakaoOAuthService kakaoOAuthService;
     private final EmailVerificationRepository emailVerificationRepository;
@@ -187,10 +186,6 @@ public class AuthService {
                 if (name == null) {
                     name = userInfo.name();
                 }
-            } else if (request.getProvider() == AuthProvider.APPLE) {
-                AppleOAuthService.AppleUserInfo userInfo = appleOAuthService.verifyIdToken(request.getIdToken());
-                email = userInfo.email();
-                providerId = userInfo.providerId();
             } else if (request.getProvider() == AuthProvider.NAVER) {
                 NaverOAuthService.NaverUserInfo userInfo = naverOAuthService.verifyAccessToken(request.getIdToken());
                 email = userInfo.email();

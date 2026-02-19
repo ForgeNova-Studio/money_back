@@ -7,7 +7,6 @@ package com.moneyflow.domain.user;
 public enum AuthProvider {
     EMAIL,    // 이메일/비밀번호 로그인
     GOOGLE,   // Google OAuth 로그인
-    APPLE,    // Apple Sign In
     NAVER,    // Naver OAuth 로그인
     KAKAO     // Kakao OAuth 로그인
 }

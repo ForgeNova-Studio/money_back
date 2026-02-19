@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class SocialLoginRequest {
 
     @NotNull(message = "로그인 제공자는 필수입니다")
-    @Schema(description = "로그인 제공자", example = "GOOGLE", allowableValues = {"GOOGLE", "APPLE"})
+    @Schema(description = "로그인 제공자", example = "GOOGLE", allowableValues = {"GOOGLE", "NAVER", "KAKAO"})
     private AuthProvider provider;
 
     @NotBlank(message = "ID Token은 필수입니다")

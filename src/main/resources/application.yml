@@ -68,10 +68,6 @@ oauth:
     # 환경 변수 GOOGLE_CLIENT_ID로 설정 권장
     # 개발 단계에서는 빈 문자열로 설정 (실제 테스트 시 필요)
     client-id: ${GOOGLE_CLIENT_ID:}
-  apple:
-    # Apple Developer에서 발급받은 서비스 ID
-    # 환경 변수 APPLE_SERVICE_ID로 설정 권장
-    service-id: ${APPLE_SERVICE_ID:}
 
 # OneSignal 설정
 onesignal:

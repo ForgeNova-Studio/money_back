@@ -13,7 +13,7 @@ import java.util.UUID;
  * 
  * Users 테이블과 1:N 관계로, 한 사용자가 여러 로그인 수단을 가질 수 있습니다.
  * - EMAIL: passwordHash 필드에 암호화된 비밀번호 저장
- * - GOOGLE/KAKAO/NAVER/APPLE: providerId 필드에 소셜 로그인 고유 ID 저장
+ * - GOOGLE/KAKAO/NAVER: providerId 필드에 소셜 로그인 고유 ID 저장
  */
 @Entity
 @Table(name = "user_auths", uniqueConstraints = {

@@ -163,7 +163,7 @@ Could not resolve attribute 'coupleId' of 'com.moneyflow.domain.expense.Expense'
 ### 3️⃣ OAuth 서비스 예외 처리 표준화
 **커밋**: `fa592ee - refactor: OAuth 서비스 예외 처리 및 로깅 개선`
 
-- ✅ GoogleOAuthService, AppleOAuthService, KakaoOAuthService, NaverOAuthService
+- ✅ GoogleOAuthService, KakaoOAuthService, NaverOAuthService
 - ✅ BusinessException(ErrorCode) 패턴으로 통일
 - ✅ ErrorCode 추가: INVALID_OAUTH_TOKEN, OAUTH_API_ERROR
 - ✅ 로깅 개선: System.out → log.debug

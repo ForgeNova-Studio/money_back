@@ -60,9 +60,9 @@ public class AuthController {
         }
 
         @PostMapping("/social-login")
-        @Operation(summary = "소셜 로그인", description = "Google, Apple, Naver, Kakao 소셜 로그인을 처리합니다. " +
-                        "클라이언트에서 받은 ID Token 또는 Access Token을 검증하고 JWT 토큰을 발급합니다. " +
-                        "(Google/Apple: ID Token, Naver/Kakao: Access Token) " +
+        @Operation(summary = "소셜 로그인", description = "Google, Naver, Kakao 소셜 로그인을 처리합니다. " +
+                        "클라이언트에서 받은 토큰(ID Token 또는 Access Token)을 검증하고 JWT 토큰을 발급합니다. " +
+                        "(Google: ID Token, Naver/Kakao: Access Token) " +
                         "신규 사용자의 경우 자동으로 회원가입이 진행됩니다.")
         @ApiResponses({
                         @ApiResponse(responseCode = "200", description = "소셜 로그인 성공 (기존 사용자)", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
@@ -79,7 +79,7 @@ public class AuthController {
         @PostMapping("/social-login/mock")
         @Operation(summary = "[개발용] Mock 소셜 로그인", description = "⚠️ 개발/테스트 전용 엔드포인트입니다. " +
                         "실제 ID Token/Access Token 없이 소셜 로그인을 테스트할 수 있습니다. " +
-                        "지원: GOOGLE, APPLE, NAVER, KAKAO. " +
+                        "지원: GOOGLE, NAVER, KAKAO. " +
                         "idToken 필드에 임의의 문자열을 입력하면 됩니다. " +
                         "프로덕션 환경에서는 자동으로 비활성화됩니다.")
         @ApiResponses({
