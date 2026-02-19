@@ -1,5 +1,5 @@
 -- V7: 소셜 로그인 지원을 위한 users 테이블 필드 추가
--- provider: 로그인 제공자 (EMAIL, GOOGLE, APPLE)
+-- provider: 로그인 제공자 (EMAIL, GOOGLE, NAVER, KAKAO)
 -- provider_id: 소셜 로그인 제공자의 사용자 고유 ID
 
 -- provider 컬럼 추가 (기본값: EMAIL)
@@ -19,5 +19,5 @@ CREATE UNIQUE INDEX idx_users_provider_provider_id ON users(provider, provider_i
 
 -- 이메일 로그인의 경우 기존처럼 이메일만으로 유니크
 -- 소셜 로그인의 경우 provider + provider_id로 유니크
-COMMENT ON COLUMN users.provider IS '로그인 제공자: EMAIL, GOOGLE, APPLE';
+COMMENT ON COLUMN users.provider IS '로그인 제공자: EMAIL, GOOGLE, NAVER, KAKAO';
 COMMENT ON COLUMN users.provider_id IS '소셜 로그인 제공자의 사용자 고유 ID';
