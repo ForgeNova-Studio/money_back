@@ -64,11 +64,18 @@ public class SecurityConfig {
                     if (!isDevProfile()) {
                         auth.requestMatchers(
                                 "/api/auth/dev/**",
-                                "/api/auth/social-login/mock").denyAll();
+                                "/api/auth/social-login/mock",
+                                "/api/test/**").denyAll();
                     }
 
-                    auth.requestMatchers("/api/auth/**").permitAll()
-                            .requestMatchers("/api/test/**").permitAll()  // 테스트 엔드포인트
+                    auth.requestMatchers("/api/auth/**").permitAll();
+
+                    // 테스트 엔드포인트: dev 프로파일에서만 인증 없이 접근 허용
+                    if (isDevProfile()) {
+                        auth.requestMatchers("/api/test/**").permitAll();
+                    }
+
+                    auth
                             .requestMatchers(
                                     "/swagger-ui.html",
                                     "/swagger-ui/**",

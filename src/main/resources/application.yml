@@ -11,6 +11,7 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    open-in-view: false  # OSIV 비활성화: DB 커넥션을 서비스 레이어에서만 사용
     properties:
       hibernate:
         format_sql: true
@@ -57,7 +58,7 @@ logging:
     org.hibernate.SQL: DEBUG
 
 jwt:
-  secret: ${JWT_SECRET:moneyflow-jwt-secret-key-for-development-please-change-in-production-minimum-256-bits}
+  secret: ${JWT_SECRET:moneyflow-jwt-secret-key-for-development-and-production-must-be-at-least-512-bits-for-hs512-algorithm-security-2024}
   access-token-validity: 3600000  # 1시간 (밀리초)
   refresh-token-validity: 2592000000  # 30일 (밀리초)
 
