@@ -124,6 +124,64 @@ class BudgetServiceTest {
                 org.mockito.ArgumentMatchers.any());
     }
 
+    @Test
+    @DisplayName("예산 조회: 목표가 0원이고 지출이 있으면 사용률 100%로 계산")
+    void getBudget_whenTargetAmountIsZeroAndSpendingExists_usageIsHundredPercent() {
+        UUID memberId = UUID.randomUUID();
+        UUID accountBookId = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+
+        AccountBook accountBook = accountBook(accountBookId, memberId);
+        User owner = user(memberId);
+        Budget budget = budget(budgetId, owner, accountBook, 2026, 2, "0");
+
+        when(accountBookRepository.findById(accountBookId)).thenReturn(Optional.of(accountBook));
+        when(budgetRepository.findByAccountBookAccountBookIdAndYearAndMonth(accountBookId, 2026, 2))
+                .thenReturn(Optional.of(budget));
+        when(expenseRepository.sumAmountByPeriod(
+                accountBookId,
+                LocalDate.of(2026, 2, 1),
+                LocalDate.of(2026, 2, 28)))
+                .thenReturn(new BigDecimal("15000"));
+
+        BudgetResponse response = budgetService.getBudget(memberId, accountBookId, 2026, 2);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTargetAmount()).isEqualByComparingTo("0");
+        assertThat(response.getCurrentSpending()).isEqualByComparingTo("15000");
+        assertThat(response.getRemainingAmount()).isEqualByComparingTo("-15000");
+        assertThat(response.getUsagePercentage()).isEqualTo(100.0);
+    }
+
+    @Test
+    @DisplayName("예산 조회: 목표가 0원이고 지출이 없으면 사용률 0%")
+    void getBudget_whenTargetAmountIsZeroAndNoSpending_usageIsZeroPercent() {
+        UUID memberId = UUID.randomUUID();
+        UUID accountBookId = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+
+        AccountBook accountBook = accountBook(accountBookId, memberId);
+        User owner = user(memberId);
+        Budget budget = budget(budgetId, owner, accountBook, 2026, 2, "0");
+
+        when(accountBookRepository.findById(accountBookId)).thenReturn(Optional.of(accountBook));
+        when(budgetRepository.findByAccountBookAccountBookIdAndYearAndMonth(accountBookId, 2026, 2))
+                .thenReturn(Optional.of(budget));
+        when(expenseRepository.sumAmountByPeriod(
+                accountBookId,
+                LocalDate.of(2026, 2, 1),
+                LocalDate.of(2026, 2, 28)))
+                .thenReturn(BigDecimal.ZERO);
+
+        BudgetResponse response = budgetService.getBudget(memberId, accountBookId, 2026, 2);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTargetAmount()).isEqualByComparingTo("0");
+        assertThat(response.getCurrentSpending()).isEqualByComparingTo("0");
+        assertThat(response.getRemainingAmount()).isEqualByComparingTo("0");
+        assertThat(response.getUsagePercentage()).isEqualTo(0.0);
+    }
+
     private User user(UUID userId) {
         return User.builder()
                 .userId(userId)

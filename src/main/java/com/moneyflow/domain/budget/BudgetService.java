@@ -138,6 +138,9 @@ public class BudgetService {
                     .divide(budget.getTargetAmount(), 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100))
                     .doubleValue();
+        } else if (currentSpending.compareTo(BigDecimal.ZERO) > 0) {
+            // targetAmount=0은 "지출 금지" 의미로 보고 지출이 발생하면 100%로 처리
+            usagePercentage = 100.0;
         }
 
         return BudgetResponse.builder()
