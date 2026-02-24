@@ -64,11 +64,12 @@ public class SecurityConfig {
                     if (!isDevProfile()) {
                         auth.requestMatchers(
                                 "/api/auth/dev/**",
-                                "/api/auth/social-login/mock").denyAll();
+                                "/api/auth/social-login/mock",
+                                "/api/test/**").denyAll();
                     }
 
                     auth.requestMatchers("/api/auth/**").permitAll()
-                            .requestMatchers("/api/test/**").permitAll()  // 테스트 엔드포인트
+                            .requestMatchers("/api/test/**").permitAll()  // 테스트 엔드포인트(dev 전용)
                             .requestMatchers(
                                     "/swagger-ui.html",
                                     "/swagger-ui/**",
