@@ -53,8 +53,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
         log.error("Unauthorized: {}", ex.getMessage());
-        ErrorCode errorCode = resolveUnauthorizedErrorCode(ex.getMessage());
-        return createErrorResponse(errorCode, ex.getMessage());
+        return createErrorResponse(ex.getErrorCode(), ex.getMessage());
     }
 
     // ===== 인증/인가 예외 (Spring Security) =====
@@ -137,19 +136,6 @@ public class GlobalExceptionHandler {
                 message,
                 LocalDateTime.now());
         return new ResponseEntity<>(error, errorCode.getHttpStatus());
-    }
-
-    private ErrorCode resolveUnauthorizedErrorCode(String message) {
-        if (message == null) {
-            return ErrorCode.AUTHENTICATION_ERROR;
-        }
-
-        // 권한/인가 문제는 403 유지, 그 외 UnauthorizedException은 401로 응답
-        if (message.contains("권한") || message.contains("접근") || message.contains("멤버") || message.contains("관리자")) {
-            return ErrorCode.ACCESS_DENIED;
-        }
-
-        return ErrorCode.AUTHENTICATION_ERROR;
     }
 
     // ===== Response Records =====

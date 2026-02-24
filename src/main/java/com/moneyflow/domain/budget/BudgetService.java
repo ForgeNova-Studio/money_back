@@ -47,7 +47,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("가계부를 찾을 수 없습니다"));
 
         if (!accountBook.isMember(userId)) {
-            throw new UnauthorizedException("해당 가계부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 가계부에 접근할 권한이 없습니다");
         }
 
         // 기존 예산이 있는지 확인
@@ -86,7 +86,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("가계부를 찾을 수 없습니다"));
 
         if (!accountBook.isMember(userId)) {
-            throw new UnauthorizedException("해당 가계부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 가계부에 접근할 권한이 없습니다");
         }
 
         Budget budget = budgetRepository.findByAccountBookAccountBookIdAndYearAndMonth(accountBookId, year, month)
@@ -108,7 +108,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("예산을 찾을 수 없습니다"));
 
         if (!budget.getAccountBook().isMember(userId)) {
-            throw new UnauthorizedException("해당 예산을 삭제할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 예산을 삭제할 권한이 없습니다");
         }
 
         budgetRepository.delete(budget);

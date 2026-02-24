@@ -48,7 +48,7 @@ public class ExpenseTransferService {
 
         // 본인 지출인지 확인
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("본인의 지출만 이동할 수 있습니다");
+            throw UnauthorizedException.accessDenied("본인의 지출만 이동할 수 있습니다");
         }
 
         // 개인 지출인지 확인
@@ -68,7 +68,7 @@ public class ExpenseTransferService {
         boolean isMember = targetBook.getMembers().stream()
                 .anyMatch(m -> m.getUser().getUserId().equals(userId));
         if (!isMember) {
-            throw new UnauthorizedException("대상 장부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("대상 장부에 접근할 권한이 없습니다");
         }
 
         // 원본 장부 ID 저장 후 이동
@@ -108,7 +108,7 @@ public class ExpenseTransferService {
         boolean isSourceMember = sourceBook.getMembers().stream()
                 .anyMatch(m -> m.getUser().getUserId().equals(userId));
         if (!isSourceMember) {
-            throw new UnauthorizedException("원본 장부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("원본 장부에 접근할 권한이 없습니다");
         }
 
         // 대상 장부 권한 확인
@@ -118,7 +118,7 @@ public class ExpenseTransferService {
         boolean isTargetMember = targetBook.getMembers().stream()
                 .anyMatch(m -> m.getUser().getUserId().equals(userId));
         if (!isTargetMember) {
-            throw new UnauthorizedException("대상 장부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("대상 장부에 접근할 권한이 없습니다");
         }
 
         // 원본 장부의 본인 개인 지출 조회

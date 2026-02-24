@@ -59,7 +59,7 @@ public class RecurringExpenseService {
                 .anyMatch(member -> member.getUser().getUserId().equals(userId));
 
         if (!isMember) {
-            throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 장부에 접근할 권한이 없습니다");
         }
 
         RecurringExpense recurringExpense = RecurringExpense.builder()
@@ -183,7 +183,7 @@ public class RecurringExpenseService {
                         .anyMatch(m -> m.getUser().getUserId().equals(userId));
 
         if (!isOwner && !isAccountBookMember) {
-            throw new UnauthorizedException("해당 고정비에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 고정비에 접근할 권한이 없습니다");
         }
 
         return toResponse(expense);
@@ -201,7 +201,7 @@ public class RecurringExpenseService {
 
         // 권한 확인: 본인의 고정비만 수정 가능
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 고정비를 수정할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 고정비를 수정할 권한이 없습니다");
         }
 
         // 금액이 변경되면 이전 금액 저장
@@ -252,7 +252,7 @@ public class RecurringExpenseService {
 
         // 권한 확인: 본인의 고정비만 삭제 가능
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 고정비를 삭제할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 고정비를 삭제할 권한이 없습니다");
         }
 
         recurringExpenseRepository.delete(expense);

@@ -55,7 +55,7 @@ public class IncomeService {
                                         .anyMatch(member -> member.getUser().getUserId().equals(userId));
 
                         if (!isMember) {
-                                throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+                                throw UnauthorizedException.accessDenied("해당 장부에 접근할 권한이 없습니다");
                         }
                 }
 
@@ -117,7 +117,7 @@ public class IncomeService {
                                 .orElseThrow(() -> new ResourceNotFoundException("수입 내역을 찾을 수 없습니다"));
 
                 if (!income.getUser().getUserId().equals(userId)) {
-                        throw new UnauthorizedException("해당 수입 내역에 접근할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("해당 수입 내역에 접근할 권한이 없습니다");
                 }
 
                 return toResponse(income);
@@ -137,7 +137,7 @@ public class IncomeService {
                                 .orElseThrow(() -> new ResourceNotFoundException("수입 내역을 찾을 수 없습니다"));
 
                 if (!income.getUser().getUserId().equals(userId)) {
-                        throw new UnauthorizedException("해당 수입 내역을 수정할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("해당 수입 내역을 수정할 권한이 없습니다");
                 }
 
                 // 업데이트
@@ -164,7 +164,7 @@ public class IncomeService {
                                 .orElseThrow(() -> new ResourceNotFoundException("수입 내역을 찾을 수 없습니다"));
 
                 if (!income.getUser().getUserId().equals(userId)) {
-                        throw new UnauthorizedException("해당 수입 내역을 삭제할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("해당 수입 내역을 삭제할 권한이 없습니다");
                 }
 
                 incomeRepository.delete(income);

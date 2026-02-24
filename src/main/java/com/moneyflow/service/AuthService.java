@@ -606,14 +606,14 @@ public class AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new UnauthorizedException("인증되지 않은 사용자입니다");
+            throw UnauthorizedException.authentication("인증되지 않은 사용자입니다");
         }
 
         // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을
         // userId.toString()로 설정했음)
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetails)) {
-            throw new UnauthorizedException("인증 정보가 올바르지 않습니다");
+            throw UnauthorizedException.authentication("인증 정보가 올바르지 않습니다");
         }
 
         String userIdString = ((UserDetails) principal).getUsername();
@@ -638,7 +638,7 @@ public class AuthService {
     public LoginResponse refreshToken(String refreshToken) {
         // STEP 1: JWT 검증 (빠른 검증 - 서명, 만료시간)
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다");
+            throw UnauthorizedException.authentication("유효하지 않거나 만료된 Refresh Token입니다");
         }
 
         // STEP 2: DB 검증 (상태 확인)
@@ -649,7 +649,7 @@ public class AuthService {
 
         // DB 만료시간 확인
         if (refreshTokenEntity.isExpired()) {
-            throw new UnauthorizedException("만료된 Refresh Token입니다");
+            throw UnauthorizedException.authentication("만료된 Refresh Token입니다");
         }
 
         // JWT에서 사용자 ID 추출
