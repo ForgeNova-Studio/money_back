@@ -69,6 +69,28 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("UnauthorizedException.authentication 발생 시 JSON 401 응답")
+    void handleUnauthorizedAuthenticationException_ReturnsJson401() throws Exception {
+        mockMvc.perform(get("/test/unauthorized-auth"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("A007"))
+                .andExpect(jsonPath("$.message").value("인증되지 않은 사용자입니다"))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    @DisplayName("UnauthorizedException.accessDenied 발생 시 JSON 403 응답")
+    void handleUnauthorizedAccessDeniedException_ReturnsJson403() throws Exception {
+        mockMvc.perform(get("/test/unauthorized-access-denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("A003"))
+                .andExpect(jsonPath("$.message").value("해당 리소스에 접근할 권한이 없습니다"))
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
     @DisplayName("BusinessException 발생 시 JSON 응답 (ErrorCode 기반)")
     void handleBusinessException_ReturnsJsonWithErrorCode() throws Exception {
         mockMvc.perform(get("/test/business-error"))
@@ -134,6 +156,16 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/test/bad-credentials")
         public void badCredentials() {
             throw new BadCredentialsException("Bad credentials");
+        }
+
+        @GetMapping("/test/unauthorized-auth")
+        public void unauthorizedAuth() {
+            throw UnauthorizedException.authentication("인증되지 않은 사용자입니다");
+        }
+
+        @GetMapping("/test/unauthorized-access-denied")
+        public void unauthorizedAccessDenied() {
+            throw UnauthorizedException.accessDenied("해당 리소스에 접근할 권한이 없습니다");
         }
 
         @GetMapping("/test/business-error")
