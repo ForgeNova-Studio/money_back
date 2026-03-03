@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
         log.error("Unauthorized: {}", ex.getMessage());
-        return createErrorResponse(ErrorCode.ACCESS_DENIED, ex.getMessage());
+        return createErrorResponse(ex.getErrorCode(), ex.getMessage());
     }
 
     // ===== 인증/인가 예외 (Spring Security) =====

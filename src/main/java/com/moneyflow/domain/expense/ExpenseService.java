@@ -56,7 +56,7 @@ public class ExpenseService {
                     .anyMatch(member -> member.getUser().getUserId().equals(userId));
 
             if (!isMember) {
-                throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+                throw UnauthorizedException.accessDenied("해당 장부에 접근할 권한이 없습니다");
             }
         } else {
             // 기본 장부 자동 할당
@@ -165,7 +165,7 @@ public class ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("지출 내역을 찾을 수 없습니다"));
 
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 지출 내역에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 지출 내역에 접근할 권한이 없습니다");
         }
 
         return toResponse(expense);
@@ -180,7 +180,7 @@ public class ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("지출 내역을 찾을 수 없습니다"));
 
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 지출 내역을 수정할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 지출 내역을 수정할 권한이 없습니다");
         }
 
         // 업데이트
@@ -211,7 +211,7 @@ public class ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("지출 내역을 찾을 수 없습니다"));
 
         if (!expense.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 지출 내역을 삭제할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 지출 내역을 삭제할 권한이 없습니다");
         }
 
         // 연결된 고정비 결제가 있으면 PENDING으로 복원

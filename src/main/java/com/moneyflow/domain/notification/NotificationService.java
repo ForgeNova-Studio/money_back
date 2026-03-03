@@ -94,7 +94,7 @@ public class NotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("알림을 찾을 수 없습니다"));
 
         if (!notification.getUser().getUserId().equals(userId)) {
-            throw new UnauthorizedException("해당 알림에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 알림에 접근할 권한이 없습니다");
         }
 
         if (!notification.getIsRead()) {
@@ -123,7 +123,7 @@ public class NotificationService {
                 .orElseThrow(() -> new UnauthorizedException("인증 정보가 올바르지 않습니다"));
 
         if (!isAdmin(admin.getEmail())) {
-            throw new UnauthorizedException("관리자 권한이 필요합니다");
+            throw UnauthorizedException.accessDenied("관리자 권한이 필요합니다");
         }
 
         // 모든 사용자 조회

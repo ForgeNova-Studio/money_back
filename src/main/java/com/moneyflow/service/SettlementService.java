@@ -61,7 +61,7 @@ public class SettlementService {
         boolean isMember = accountBook.getMembers().stream()
                 .anyMatch(m -> m.getUser().getUserId().equals(userId));
         if (!isMember) {
-            throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+            throw UnauthorizedException.accessDenied("해당 장부에 접근할 권한이 없습니다");
         }
 
         // 장부의 모든 멤버 조회

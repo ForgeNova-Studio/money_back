@@ -158,10 +158,14 @@ public class ReportService {
                 }
 
                 Budget budget = budgetOpt.get();
-                int usagePercentage = budget.getTargetAmount().compareTo(BigDecimal.ZERO) == 0 ? 0
-                                : totalExpense.multiply(BigDecimal.valueOf(100))
-                                                .divide(budget.getTargetAmount(), 0, RoundingMode.HALF_UP)
-                                                .intValue();
+                int usagePercentage;
+                if (budget.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        usagePercentage = totalExpense.multiply(BigDecimal.valueOf(100))
+                                        .divide(budget.getTargetAmount(), 0, RoundingMode.HALF_UP)
+                                        .intValue();
+                } else {
+                        usagePercentage = totalExpense.compareTo(BigDecimal.ZERO) > 0 ? 100 : 0;
+                }
 
                 return BudgetSummary.builder()
                                 .targetAmount(budget.getTargetAmount())

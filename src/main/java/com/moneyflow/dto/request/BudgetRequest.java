@@ -32,6 +32,6 @@ public class BudgetRequest {
     private Integer month;
 
     @NotNull(message = "목표 금액은 필수입니다")
-    @DecimalMin(value = "0.0", inclusive = false, message = "목표 금액은 0보다 커야 합니다")
+    @DecimalMin(value = "0.0", inclusive = true, message = "목표 금액은 0 이상이어야 합니다")
     private BigDecimal targetAmount;
 }

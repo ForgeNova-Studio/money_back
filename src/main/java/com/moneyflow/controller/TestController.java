@@ -1,6 +1,7 @@
 package com.moneyflow.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import java.util.Map;
  * 프로덕션 배포 전 삭제 필요
  */
 @RestController
+@Profile("dev")
 @RequestMapping("/api/test")
 @RequiredArgsConstructor
 public class TestController {

@@ -48,7 +48,7 @@ public class AccountBookService {
                                         .orElseThrow(() -> new ResourceNotFoundException("커플 정보를 찾을 수 없습니다"));
 
                         if (!couple.isMember(userId)) {
-                                throw new UnauthorizedException("해당 커플의 멤버가 아닙니다");
+                                throw UnauthorizedException.accessDenied("해당 커플의 멤버가 아닙니다");
                         }
                 }
 
@@ -162,7 +162,7 @@ public class AccountBookService {
 
                 // 권한 확인 (OWNER만 멤버 추가 가능)
                 if (!accountBook.isOwner(inviterId)) {
-                        throw new UnauthorizedException("멤버를 추가할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("멤버를 추가할 권한이 없습니다");
                 }
 
                 // 이미 멤버인지 확인
@@ -200,7 +200,7 @@ public class AccountBookService {
                                 .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
 
                 if (!accountBook.isOwner(userId)) {
-                        throw new UnauthorizedException("장부를 삭제할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("장부를 삭제할 권한이 없습니다");
                 }
 
                 accountBook.deactivate();
@@ -219,7 +219,7 @@ public class AccountBookService {
                                 .orElseThrow(() -> new ResourceNotFoundException("장부를 찾을 수 없습니다"));
 
                 if (!accountBook.isOwner(userId)) {
-                        throw new UnauthorizedException("장부를 수정할 권한이 없습니다");
+                        throw UnauthorizedException.accessDenied("장부를 수정할 권한이 없습니다");
                 }
 
                 if (request.getName() != null && !request.getName().isBlank()) {
@@ -257,7 +257,7 @@ public class AccountBookService {
         public List<AccountBookResponse.MemberInfo> getMembers(UUID userId, UUID accountBookId) {
                 // 권한 확인
                 if (!accountBookMemberRepository.existsByAccountBookAccountBookIdAndUserUserId(accountBookId, userId)) {
-                        throw new UnauthorizedException("장부의 멤버만 멤버 목록을 조회할 수 있습니다");
+                        throw UnauthorizedException.accessDenied("장부의 멤버만 멤버 목록을 조회할 수 있습니다");
                 }
 
                 List<AccountBookMember> members = accountBookMemberRepository

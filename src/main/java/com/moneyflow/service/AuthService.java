@@ -209,6 +209,16 @@ public class AuthService {
                 throw new BusinessException("지원하지 않는 로그인 제공자입니다");
             }
 
+            // 이메일 정규화 및 필수 검증
+            email = normalizeEmail(email);
+            if (email == null) {
+                throw new BusinessException(
+                        "소셜 계정에서 이메일 정보를 가져올 수 없습니다. 이메일 제공 동의 후 다시 시도해주세요.",
+                        ErrorCode.INVALID_INPUT);
+            }
+
+            name = normalizeName(name);
+
             // 기존 사용자 조회 (UserAuth 테이블에서 provider + providerId로)
             UserAuth existingAuth = userAuthRepository.findByProviderAndProviderId(request.getProvider(), providerId)
                     .orElse(null);
@@ -217,7 +227,7 @@ public class AuthService {
             // 기존 사용자 없음 → 자동 회원가입
             if (existingAuth == null) {
                 // 이메일로 다른 provider의 기존 사용자가 있는지 확인
-                if (email != null && !email.isBlank() && userRepository.existsByEmail(email)) {
+                if (userRepository.existsByEmail(email)) {
                     // 기존 사용자의 로그인 방법 조회
                     User existingUser = userRepository.findByEmail(email).orElse(null);
                     if (existingUser != null) {
@@ -234,7 +244,7 @@ public class AuthService {
 
                 // 닉네임이 없으면 이메일 앞부분 사용
                 if (name == null || name.isBlank()) {
-                    name = email.split("@")[0];
+                    name = deriveNameFromEmail(email);
                 }
 
                 // 사용자 생성 (프로필 정보만)
@@ -257,7 +267,7 @@ public class AuthService {
             } else {
                 user = existingAuth.getUser();
                 // 기존 사용자의 이메일이 비어있고, 새로 받은 이메일이 있으면 업데이트
-                if ((user.getEmail() == null || user.getEmail().isBlank()) && email != null && !email.isBlank()) {
+                if (user.getEmail() == null || user.getEmail().isBlank()) {
                     // 이메일 중복 체크 후 업데이트
                     if (!userRepository.existsByEmail(email)) {
                         user.setEmail(email);
@@ -309,6 +319,32 @@ public class AuthService {
             log.error("소셜 로그인 토큰 검증 실패: {}", e.getMessage());
             throw new BusinessException("유효하지 않은 소셜 로그인 토큰입니다");
         }
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+
+        String normalized = email.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeName(String name) {
+        if (name == null) {
+            return null;
+        }
+
+        String normalized = name.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String deriveNameFromEmail(String email) {
+        int atIndex = email.indexOf('@');
+        if (atIndex > 0) {
+            return email.substring(0, atIndex);
+        }
+        return "사용자";
     }
 
     /**
@@ -570,14 +606,14 @@ public class AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new UnauthorizedException("인증되지 않은 사용자입니다");
+            throw UnauthorizedException.authentication("인증되지 않은 사용자입니다");
         }
 
         // UserDetails에서 userId 추출 (CustomUserDetailsService에서 username을
         // userId.toString()로 설정했음)
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetails)) {
-            throw new UnauthorizedException("인증 정보가 올바르지 않습니다");
+            throw UnauthorizedException.authentication("인증 정보가 올바르지 않습니다");
         }
 
         String userIdString = ((UserDetails) principal).getUsername();
@@ -602,7 +638,7 @@ public class AuthService {
     public LoginResponse refreshToken(String refreshToken) {
         // STEP 1: JWT 검증 (빠른 검증 - 서명, 만료시간)
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다");
+            throw UnauthorizedException.authentication("유효하지 않거나 만료된 Refresh Token입니다");
         }
 
         // STEP 2: DB 검증 (상태 확인)
@@ -613,7 +649,7 @@ public class AuthService {
 
         // DB 만료시간 확인
         if (refreshTokenEntity.isExpired()) {
-            throw new UnauthorizedException("만료된 Refresh Token입니다");
+            throw UnauthorizedException.authentication("만료된 Refresh Token입니다");
         }
 
         // JWT에서 사용자 ID 추출

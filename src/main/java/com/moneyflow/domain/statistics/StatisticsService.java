@@ -278,7 +278,7 @@ public class StatisticsService {
                                         .anyMatch(m -> m.getUser().getUserId().equals(userId));
 
                         if (!isMember) {
-                                throw new UnauthorizedException("해당 장부에 접근할 권한이 없습니다");
+                                throw UnauthorizedException.accessDenied("해당 장부에 접근할 권한이 없습니다");
                         }
                 } else {
                         // 기본 장부 조회 (이미 JOIN FETCH 포함)
