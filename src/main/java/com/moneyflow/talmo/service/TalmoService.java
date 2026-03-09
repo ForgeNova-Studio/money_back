@@ -7,6 +7,7 @@ import com.moneyflow.talmo.dto.*;
 import com.moneyflow.talmo.repository.TalmoProblemRepository;
 import com.moneyflow.talmo.repository.TalmoRecordRepository;
 import com.moneyflow.talmo.repository.TalmoUserRepository;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +22,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class TalmoService {
 
     private final TalmoUserRepository userRepository;
     private final TalmoRecordRepository recordRepository;
     private final TalmoProblemRepository problemRepository;
+    private final KakaoMessageService kakaoMessageService;
 
     // ===== 유저 =====
 
@@ -149,6 +152,7 @@ public class TalmoService {
                 .build();
 
         problemRepository.save(problem);
+        notifyProblemSolved(problem);
         return TalmoProblemResponse.from(problem);
     }
 
@@ -174,5 +178,48 @@ public class TalmoService {
         TalmoProblem problem = problemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("문제를 찾을 수 없습니다: " + id));
         return TalmoProblemResponse.from(problem);
+    }
+
+    private void notifyProblemSolved(TalmoProblem problem) {
+        LocalDateTime startOfDay = LocalDate.now().atTime(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+
+        List<TalmoUser> recipients = userRepository.findByKakaoRefreshTokenIsNotNull().stream()
+                .filter(user -> !user.getId().equals(problem.getUser().getId()))
+                .filter(user -> !problemRepository.existsByUserIdAndCreatedAtBetween(user.getId(), startOfDay, endOfDay))
+                .toList();
+
+        if (recipients.isEmpty()) {
+            return;
+        }
+
+        String source = problem.getSource() == null || problem.getSource().isBlank()
+                ? "코테 문제"
+                : problem.getSource();
+
+        String message = """
+                👀 %s님이 방금 %s 문제를 풀었어요!
+
+                📝 문제: %s
+                %s
+
+                아직 오늘 코테를 안 했다면 지금 한 문제 도전해봐요 🔥
+                """.formatted(
+                problem.getUser().getName(),
+                source,
+                problem.getTitle(),
+                problem.getDifficulty() == null || problem.getDifficulty().isBlank()
+                        ? ""
+                        : "🏷️ 난이도: " + problem.getDifficulty());
+
+        int sentCount = 0;
+        for (TalmoUser recipient : recipients) {
+            if (kakaoMessageService.sendMessage(recipient, message.trim())) {
+                sentCount++;
+            }
+        }
+
+        log.info("문제 등록 즉시 알림 발송 완료 - problemId: {}, recipients: {}, sent: {}",
+                problem.getId(), recipients.size(), sentCount);
     }
 }
