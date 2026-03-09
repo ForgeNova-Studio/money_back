@@ -49,6 +49,18 @@ public class TalmoProblem {
     @Column(name = "solution_note", columnDefinition = "TEXT")
     private String solutionNote;
 
+    @Column(name = "time_complexity", length = 50)
+    private String timeComplexity;
+
+    @Column(name = "space_complexity", length = 50)
+    private String spaceComplexity;
+
+    @Column(name = "complexity_reason", columnDefinition = "TEXT")
+    private String complexityReason;
+
+    @Column(name = "complexity_confidence")
+    private Integer complexityConfidence;
+
     @Column(length = 200)
     private String tags; // 쉼표로 구분: "문자열,DP,그리디"
 
@@ -58,8 +70,9 @@ public class TalmoProblem {
     @Builder
     public TalmoProblem(TalmoUser user, String title, String source, String difficulty,
             String problemUrl, String description, String ioExample,
-            String ioExplanation, String solutionCode, String solutionNote, String tags,
-            LocalDateTime createdAt) {
+            String ioExplanation, String solutionCode, String solutionNote,
+            String timeComplexity, String spaceComplexity, String complexityReason,
+            Integer complexityConfidence, String tags, LocalDateTime createdAt) {
         this.user = user;
         this.title = title;
         this.source = source;
@@ -70,6 +83,10 @@ public class TalmoProblem {
         this.ioExplanation = ioExplanation;
         this.solutionCode = solutionCode;
         this.solutionNote = solutionNote;
+        this.timeComplexity = timeComplexity;
+        this.spaceComplexity = spaceComplexity;
+        this.complexityReason = complexityReason;
+        this.complexityConfidence = complexityConfidence;
         this.tags = tags;
         this.createdAt = createdAt != null ? createdAt : LocalDateTime.now();
     }

@@ -21,6 +21,10 @@ public class TalmoProblemResponse {
     private String ioExplanation;
     private String solutionCode;
     private String solutionNote;
+    private String timeComplexity;
+    private String spaceComplexity;
+    private String complexityReason;
+    private Integer complexityConfidence;
     private String tags;
     private LocalDateTime createdAt;
 
@@ -38,6 +42,10 @@ public class TalmoProblemResponse {
                 .ioExplanation(problem.getIoExplanation())
                 .solutionCode(problem.getSolutionCode())
                 .solutionNote(problem.getSolutionNote())
+                .timeComplexity(problem.getTimeComplexity())
+                .spaceComplexity(problem.getSpaceComplexity())
+                .complexityReason(problem.getComplexityReason())
+                .complexityConfidence(problem.getComplexityConfidence())
                 .tags(problem.getTags())
                 .createdAt(problem.getCreatedAt())
                 .build();

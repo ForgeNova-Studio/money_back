@@ -23,5 +23,9 @@ public class TalmoProblemRequest {
     private String ioExplanation; // 입출력 예 설명
     private String solutionCode;
     private String solutionNote;
+    private String timeComplexity;
+    private String spaceComplexity;
+    private String complexityReason;
+    private Integer complexityConfidence;
     private String tags; // 쉼표로 구분
 }

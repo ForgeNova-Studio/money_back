@@ -148,6 +148,10 @@ public class TalmoService {
                 .ioExplanation(request.getIoExplanation())
                 .solutionCode(request.getSolutionCode())
                 .solutionNote(request.getSolutionNote())
+                .timeComplexity(request.getTimeComplexity())
+                .spaceComplexity(request.getSpaceComplexity())
+                .complexityReason(request.getComplexityReason())
+                .complexityConfidence(request.getComplexityConfidence())
                 .tags(request.getTags())
                 .build();
 
