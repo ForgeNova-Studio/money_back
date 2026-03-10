@@ -429,21 +429,18 @@ public class TalmoService {
         }
 
         String message = """
-                🧠 코딩 풀이 분석 결과
+                🧠 %s에 더 나은 방식이 있어요
 
                 문제: %s
-                시간복잡도: %s
-                공간복잡도: %s
-
-                현재 풀이도 동작하지만 더 효율적인 접근이 있습니다.
                 추천 접근: %s
+                개선 빅오: %s
 
-                사이트에서 자세한 분석을 확인해보세요.
+                지금 다시 풀어보면서 개선 접근을 적용해보세요.
                 """.formatted(
+                getProblemAgeLabel(problem),
                 problem.getTitle(),
-                defaultText(analysis.getTimeComplexity()),
-                defaultText(analysis.getSpaceComplexity()),
-                defaultText(analysis.getBetterApproach())
+                defaultText(analysis.getBetterApproach()),
+                defaultText(analysis.getBetterTimeComplexity())
         );
 
         boolean sent = kakaoMessageService.sendMessage(problem.getUser(), message.trim());
@@ -479,5 +476,21 @@ public class TalmoService {
 
     private String defaultText(String value) {
         return value == null || value.isBlank() ? "(없음)" : value;
+    }
+
+    private String getProblemAgeLabel(TalmoProblem problem) {
+        LocalDate solvedDate = problem.getCreatedAt().toLocalDate();
+        long days = java.time.temporal.ChronoUnit.DAYS.between(solvedDate, LocalDate.now());
+
+        if (days <= 0) {
+            return "오늘 푼 문제";
+        }
+        if (days == 1) {
+            return "어제 푼 문제";
+        }
+        if (days < 7) {
+            return days + "일 전에 푼 문제";
+        }
+        return "지난주에 푼 문제";
     }
 }

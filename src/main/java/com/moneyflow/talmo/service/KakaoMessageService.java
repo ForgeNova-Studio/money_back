@@ -57,8 +57,8 @@ public class KakaoMessageService {
                         "object_type": "text",
                         "text": "%s",
                         "link": {
-                            "web_url": "https://talmo.your-domain.com",
-                            "mobile_web_url": "https://talmo.your-domain.com"
+                            "web_url": "https://algorithms-mu.vercel.app",
+                            "mobile_web_url": "https://algorithms-mu.vercel.app"
                         },
                         "button_title": "지금 풀러가기 🔥"
                     }
