@@ -1,9 +1,12 @@
 package com.moneyflow.talmo.service;
 
 import com.moneyflow.talmo.domain.TalmoProblem;
+import com.moneyflow.talmo.domain.TalmoProblemAnalysis;
 import com.moneyflow.talmo.domain.TalmoRecord;
 import com.moneyflow.talmo.domain.TalmoUser;
+import com.moneyflow.talmo.config.TalmoAdminPolicy;
 import com.moneyflow.talmo.dto.*;
+import com.moneyflow.talmo.repository.TalmoProblemAnalysisRepository;
 import com.moneyflow.talmo.repository.TalmoProblemRepository;
 import com.moneyflow.talmo.repository.TalmoRecordRepository;
 import com.moneyflow.talmo.repository.TalmoUserRepository;
@@ -28,7 +31,9 @@ public class TalmoService {
     private final TalmoUserRepository userRepository;
     private final TalmoRecordRepository recordRepository;
     private final TalmoProblemRepository problemRepository;
+    private final TalmoProblemAnalysisRepository problemAnalysisRepository;
     private final KakaoMessageService kakaoMessageService;
+    private final TalmoAdminPolicy talmoAdminPolicy;
 
     // ===== 유저 =====
 
@@ -157,7 +162,35 @@ public class TalmoService {
 
         problemRepository.save(problem);
         notifyProblemSolved(problem);
-        return TalmoProblemResponse.from(problem);
+        return toProblemResponse(problem);
+    }
+
+    @Transactional
+    public TalmoProblemResponse updateProblem(Long problemId, TalmoProblemRequest request) {
+        TalmoProblem problem = getProblemWithUser(problemId);
+
+        if (!problem.getUser().getId().equals(request.getUserId())) {
+            throw new IllegalArgumentException("본인이 등록한 풀이만 수정할 수 있습니다.");
+        }
+
+        problem.updateProblem(
+                request.getTitle(),
+                request.getSource(),
+                request.getDifficulty(),
+                request.getProblemUrl(),
+                request.getDescription(),
+                request.getIoExample(),
+                request.getIoExplanation(),
+                request.getSolutionCode(),
+                request.getSolutionNote(),
+                request.getTimeComplexity(),
+                request.getSpaceComplexity(),
+                request.getComplexityReason(),
+                request.getComplexityConfidence(),
+                request.getTags()
+        );
+
+        return toProblemResponse(problem);
     }
 
     public List<TalmoProblemResponse> getProblems(Long userId, Integer limit) {
@@ -174,14 +207,163 @@ public class TalmoService {
         }
 
         return problems.stream()
-                .map(TalmoProblemResponse::from)
+                .map(this::toProblemResponse)
                 .collect(Collectors.toList());
     }
 
     public TalmoProblemResponse getProblem(Long id) {
-        TalmoProblem problem = problemRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("문제를 찾을 수 없습니다: " + id));
-        return TalmoProblemResponse.from(problem);
+        TalmoProblem problem = getProblemWithUser(id);
+        return toProblemResponse(problem);
+    }
+
+    public List<TalmoProblemResponse> getAdminProblems(Long adminUserId, String status, Integer limit) {
+        TalmoUser admin = getAdminUser(adminUserId);
+        List<TalmoProblem> problems = problemRepository.findAllWithUser();
+
+        return problems.stream()
+                .map(this::toProblemResponse)
+                .filter(problem -> {
+                    if (status == null || status.isBlank() || "all".equalsIgnoreCase(status)) {
+                        return true;
+                    }
+                    if ("pending".equalsIgnoreCase(status)) {
+                        return problem.getLatestAnalysis() == null;
+                    }
+                    return status.equalsIgnoreCase(
+                            problem.getLatestAnalysis() == null ? "pending" : problem.getLatestAnalysis().getAnalysisStatus()
+                    );
+                })
+                .limit(limit != null && limit > 0 ? limit : problems.size())
+                .collect(Collectors.toList());
+    }
+
+    public TalmoProblemAnalysisPromptResponse generateAnalysisPrompt(Long problemId, Long adminUserId) {
+        getAdminUser(adminUserId);
+        TalmoProblem problem = getProblemWithUser(problemId);
+
+        String prompt = """
+                [AI ANALYSIS REQUEST]
+
+                solutionId
+                %d
+
+                solutionVersion
+                %d
+
+                problemId
+                %d
+
+                problemTitle
+                %s
+
+                problemDescription
+                ----------------
+                %s
+
+                ioExample
+                ----------------
+                %s
+
+                ioExplanation
+                ----------------
+                %s
+
+                user
+                ----------------
+                userId: %d
+                nickname: %s
+
+                userSolutionCode
+                ----------------
+                %s
+
+                request
+                ----------------
+                1. 시간복잡도(Time Complexity)
+                2. 공간복잡도(Space Complexity)
+                3. 현재 코드 접근 방식 설명
+                4. 더 효율적인 접근 가능 여부 (YES / NO)
+                5. 가능하다면 더 나은 알고리즘 접근 방식 설명
+                6. 개선 접근의 예상 시간복잡도
+                7. 개선 접근의 예상 공간복잡도
+
+                [AI ANALYSIS RESULT FORMAT]
+                solutionId: %d
+                solutionVersion: %d
+                problemId: %d
+                userId: %d
+                timeComplexity:
+                spaceComplexity:
+                approachSummary:
+                analysisText:
+                improvementPossible:
+                betterApproach:
+                betterTimeComplexity:
+                betterSpaceComplexity:
+                """.formatted(
+                problem.getId(),
+                problem.getSolutionVersion(),
+                problem.getId(),
+                defaultText(problem.getTitle()),
+                defaultText(problem.getDescription()),
+                defaultText(problem.getIoExample()),
+                defaultText(problem.getIoExplanation()),
+                problem.getUser().getId(),
+                problem.getUser().getName(),
+                defaultText(problem.getSolutionCode()),
+                problem.getId(),
+                problem.getSolutionVersion(),
+                problem.getId(),
+                problem.getUser().getId()
+        );
+
+        return TalmoProblemAnalysisPromptResponse.builder()
+                .problemId(problem.getId())
+                .solutionVersion(problem.getSolutionVersion())
+                .userId(problem.getUser().getId())
+                .userName(problem.getUser().getName())
+                .title(problem.getTitle())
+                .prompt(prompt)
+                .build();
+    }
+
+    @Transactional
+    public TalmoProblemResponse saveProblemAnalysis(Long problemId, TalmoProblemAnalysisRequest request) {
+        TalmoUser admin = getAdminUser(request.getAdminUserId());
+        TalmoProblem problem = getProblemWithUser(problemId);
+
+        int targetVersion = request.getSolutionVersion() != null
+                ? request.getSolutionVersion()
+                : problem.getSolutionVersion();
+
+        if (!Integer.valueOf(problem.getSolutionVersion()).equals(targetVersion)) {
+            throw new IllegalArgumentException("최신 풀이 버전과 맞지 않습니다. 새로고침 후 다시 시도해주세요.");
+        }
+
+        boolean improvementPossible = Boolean.TRUE.equals(request.getImprovementPossible());
+        TalmoProblemAnalysis analysis = TalmoProblemAnalysis.builder()
+                .problem(problem)
+                .solutionVersion(targetVersion)
+                .timeComplexity(request.getTimeComplexity())
+                .spaceComplexity(request.getSpaceComplexity())
+                .approachSummary(request.getApproachSummary())
+                .analysisText(request.getAnalysisText())
+                .improvementPossible(improvementPossible)
+                .betterApproach(request.getBetterApproach())
+                .betterTimeComplexity(request.getBetterTimeComplexity())
+                .betterSpaceComplexity(request.getBetterSpaceComplexity())
+                .promptSnapshot(request.getPromptSnapshot())
+                .aiRawResponse(request.getAiRawResponse())
+                .analysisStatus("SAVED")
+                .notificationStatus("NOT_REQUIRED")
+                .analyzedByName(admin.getName())
+                .analyzedAt(LocalDateTime.now())
+                .build();
+
+        applyImprovementNotification(problem, analysis);
+        problemAnalysisRepository.save(analysis);
+
+        return toProblemResponse(problem);
     }
 
     private void notifyProblemSolved(TalmoProblem problem) {
@@ -225,5 +407,77 @@ public class TalmoService {
 
         log.info("문제 등록 즉시 알림 발송 완료 - problemId: {}, recipients: {}, sent: {}",
                 problem.getId(), recipients.size(), sentCount);
+    }
+
+    private void applyImprovementNotification(TalmoProblem problem, TalmoProblemAnalysis analysis) {
+        if (!analysis.isImprovementPossible()) {
+            analysis.markNotificationStatus("NOT_REQUIRED", null);
+            return;
+        }
+
+        if (problemAnalysisRepository.existsByProblemIdAndSolutionVersionAndNotificationStatus(
+                problem.getId(),
+                analysis.getSolutionVersion(),
+                "SENT")) {
+            analysis.markNotificationStatus("SKIPPED_DUPLICATE", null);
+            return;
+        }
+
+        if (!problem.getUser().hasKakaoToken()) {
+            analysis.markNotificationStatus("SKIPPED_NO_KAKAO", null);
+            return;
+        }
+
+        String message = """
+                🧠 코딩 풀이 분석 결과
+
+                문제: %s
+                시간복잡도: %s
+                공간복잡도: %s
+
+                현재 풀이도 동작하지만 더 효율적인 접근이 있습니다.
+                추천 접근: %s
+
+                사이트에서 자세한 분석을 확인해보세요.
+                """.formatted(
+                problem.getTitle(),
+                defaultText(analysis.getTimeComplexity()),
+                defaultText(analysis.getSpaceComplexity()),
+                defaultText(analysis.getBetterApproach())
+        );
+
+        boolean sent = kakaoMessageService.sendMessage(problem.getUser(), message.trim());
+        if (sent) {
+            analysis.markNotificationStatus("SENT", LocalDateTime.now());
+            return;
+        }
+
+        analysis.markNotificationStatus("FAILED", null);
+    }
+
+    private TalmoProblemResponse toProblemResponse(TalmoProblem problem) {
+        TalmoProblemAnalysis latestAnalysis = problemAnalysisRepository
+                .findTopByProblemIdAndSolutionVersionOrderByCreatedAtDesc(problem.getId(), problem.getSolutionVersion())
+                .orElse(null);
+        return TalmoProblemResponse.from(problem, TalmoProblemAnalysisResponse.from(latestAnalysis));
+    }
+
+    private TalmoProblem getProblemWithUser(Long problemId) {
+        return problemRepository.findByIdWithUser(problemId)
+                .orElseThrow(() -> new IllegalArgumentException("문제를 찾을 수 없습니다: " + problemId));
+    }
+
+    private TalmoUser getAdminUser(Long adminUserId) {
+        TalmoUser admin = userRepository.findById(adminUserId)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 유저를 찾을 수 없습니다: " + adminUserId));
+
+        if (!talmoAdminPolicy.isAdmin(admin)) {
+            throw new IllegalArgumentException("관리자 권한이 없습니다.");
+        }
+        return admin;
+    }
+
+    private String defaultText(String value) {
+        return value == null || value.isBlank() ? "(없음)" : value;
     }
 }

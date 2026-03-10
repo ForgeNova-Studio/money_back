@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TalmoProblemRepository extends JpaRepository<TalmoProblem, Long> {
 
@@ -20,6 +21,9 @@ public interface TalmoProblemRepository extends JpaRepository<TalmoProblem, Long
 
     @Query("SELECT p FROM TalmoProblem p WHERE p.createdAt >= :startOfDay")
     List<TalmoProblem> findTodayProblems(@Param("startOfDay") LocalDateTime startOfDay);
+
+    @Query("SELECT p FROM TalmoProblem p JOIN FETCH p.user WHERE p.id = :id")
+    Optional<TalmoProblem> findByIdWithUser(@Param("id") Long id);
 
     boolean existsByUserIdAndCreatedAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
 }

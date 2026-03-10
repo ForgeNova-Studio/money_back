@@ -26,9 +26,12 @@ public class TalmoProblemResponse {
     private String complexityReason;
     private Integer complexityConfidence;
     private String tags;
+    private Integer solutionVersion;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private TalmoProblemAnalysisResponse latestAnalysis;
 
-    public static TalmoProblemResponse from(TalmoProblem problem) {
+    public static TalmoProblemResponse from(TalmoProblem problem, TalmoProblemAnalysisResponse latestAnalysis) {
         return TalmoProblemResponse.builder()
                 .id(problem.getId())
                 .userId(problem.getUser().getId())
@@ -47,7 +50,10 @@ public class TalmoProblemResponse {
                 .complexityReason(problem.getComplexityReason())
                 .complexityConfidence(problem.getComplexityConfidence())
                 .tags(problem.getTags())
+                .solutionVersion(problem.getSolutionVersion())
                 .createdAt(problem.getCreatedAt())
+                .updatedAt(problem.getUpdatedAt())
+                .latestAnalysis(latestAnalysis)
                 .build();
     }
 }

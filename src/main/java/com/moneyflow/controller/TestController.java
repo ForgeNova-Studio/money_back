@@ -51,4 +51,22 @@ public class TestController {
         result.put("matches", matches);
         return result;
     }
+
+    /**
+     * Sentry 에러 테스트
+     * 예: GET /api/test/sentry
+     * 호출하면 Sentry 대시보드에서 에러 확인 가능
+     */
+    @GetMapping("/sentry")
+    public Map<String, String> testSentry() {
+        try {
+            throw new RuntimeException("Sentry 테스트 에러 - 정상 작동 중!");
+        } catch (Exception e) {
+            io.sentry.Sentry.captureException(e);
+            Map<String, String> result = new HashMap<>();
+            result.put("status", "error_sent");
+            result.put("message", "Sentry 대시보드에서 에러를 확인하세요!");
+            return result;
+        }
+    }
 }

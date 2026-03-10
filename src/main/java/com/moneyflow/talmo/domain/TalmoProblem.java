@@ -67,12 +67,19 @@ public class TalmoProblem {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @Column(name = "solution_version", nullable = false)
+    private Integer solutionVersion;
+
     @Builder
     public TalmoProblem(TalmoUser user, String title, String source, String difficulty,
             String problemUrl, String description, String ioExample,
             String ioExplanation, String solutionCode, String solutionNote,
             String timeComplexity, String spaceComplexity, String complexityReason,
-            Integer complexityConfidence, String tags, LocalDateTime createdAt) {
+            Integer complexityConfidence, String tags, LocalDateTime createdAt,
+            LocalDateTime updatedAt, Integer solutionVersion) {
         this.user = user;
         this.title = title;
         this.source = source;
@@ -89,5 +96,44 @@ public class TalmoProblem {
         this.complexityConfidence = complexityConfidence;
         this.tags = tags;
         this.createdAt = createdAt != null ? createdAt : LocalDateTime.now();
+        this.updatedAt = updatedAt != null ? updatedAt : this.createdAt;
+        this.solutionVersion = solutionVersion != null ? solutionVersion : 1;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        if (this.updatedAt == null) {
+            this.updatedAt = this.createdAt;
+        }
+        if (this.solutionVersion == null) {
+            this.solutionVersion = 1;
+        }
+    }
+
+    public void updateProblem(String title, String source, String difficulty,
+            String problemUrl, String description, String ioExample,
+            String ioExplanation, String solutionCode, String solutionNote,
+            String timeComplexity, String spaceComplexity, String complexityReason,
+            Integer complexityConfidence, String tags) {
+        this.title = title;
+        this.source = source;
+        this.difficulty = difficulty;
+        this.problemUrl = problemUrl;
+        this.description = description;
+        this.ioExample = ioExample;
+        this.ioExplanation = ioExplanation;
+        this.solutionCode = solutionCode;
+        this.solutionNote = solutionNote;
+        this.timeComplexity = timeComplexity;
+        this.spaceComplexity = spaceComplexity;
+        this.complexityReason = complexityReason;
+        this.complexityConfidence = complexityConfidence;
+        this.tags = tags;
+        this.updatedAt = LocalDateTime.now();
+        this.solutionVersion = (this.solutionVersion == null ? 1 : this.solutionVersion) + 1;
     }
 }

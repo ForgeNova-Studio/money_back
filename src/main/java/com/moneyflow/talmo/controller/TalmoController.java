@@ -61,6 +61,13 @@ public class TalmoController {
         return ResponseEntity.ok(talmoService.createProblem(request));
     }
 
+    @PutMapping("/problems/{id}")
+    public ResponseEntity<TalmoProblemResponse> updateProblem(
+            @PathVariable Long id,
+            @Valid @RequestBody TalmoProblemRequest request) {
+        return ResponseEntity.ok(talmoService.updateProblem(id, request));
+    }
+
     @GetMapping("/problems")
     public ResponseEntity<List<TalmoProblemResponse>> getProblems(
             @RequestParam(required = false) Long userId,
@@ -71,5 +78,27 @@ public class TalmoController {
     @GetMapping("/problems/{id}")
     public ResponseEntity<TalmoProblemResponse> getProblem(@PathVariable Long id) {
         return ResponseEntity.ok(talmoService.getProblem(id));
+    }
+
+    @GetMapping("/admin/problems")
+    public ResponseEntity<List<TalmoProblemResponse>> getAdminProblems(
+            @RequestParam Long adminUserId,
+            @RequestParam(required = false, defaultValue = "pending") String status,
+            @RequestParam(required = false) Integer limit) {
+        return ResponseEntity.ok(talmoService.getAdminProblems(adminUserId, status, limit));
+    }
+
+    @GetMapping("/admin/problems/{id}/analysis-prompt")
+    public ResponseEntity<TalmoProblemAnalysisPromptResponse> getAnalysisPrompt(
+            @PathVariable Long id,
+            @RequestParam Long adminUserId) {
+        return ResponseEntity.ok(talmoService.generateAnalysisPrompt(id, adminUserId));
+    }
+
+    @PostMapping("/admin/problems/{id}/analysis")
+    public ResponseEntity<TalmoProblemResponse> saveProblemAnalysis(
+            @PathVariable Long id,
+            @Valid @RequestBody TalmoProblemAnalysisRequest request) {
+        return ResponseEntity.ok(talmoService.saveProblemAnalysis(id, request));
     }
 }
