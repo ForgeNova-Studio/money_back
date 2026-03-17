@@ -69,6 +69,7 @@ public class SecurityConfig {
                     }
 
                     auth.requestMatchers("/api/auth/**").permitAll()
+                            .requestMatchers("/api/terms/active").permitAll() // 약관 조회 (회원가입 전 조회 필요)
                             .requestMatchers("/api/talmo/**").permitAll() // Talmo 타이핑 연습 (인증 불필요)
                             .requestMatchers("/api/test/**").permitAll() // 테스트 엔드포인트(dev 전용)
                             .requestMatchers(
