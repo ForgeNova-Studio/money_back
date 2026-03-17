@@ -32,4 +32,9 @@ public interface UserAuthRepository extends JpaRepository<UserAuth, UUID> {
      * 사용자 ID와 provider로 인증 정보 조회
      */
     Optional<UserAuth> findByUserUserIdAndProvider(UUID userId, AuthProvider provider);
+
+    /**
+     * 사용자의 모든 인증 정보 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(UUID userId);
 }

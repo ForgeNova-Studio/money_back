@@ -189,4 +189,9 @@ public interface RecurringExpenseRepository extends JpaRepository<RecurringExpen
         Optional<RecurringExpense> findByUser_UserIdAndSubscriptionProvider(
                         @Param("userId") UUID userId,
                         @Param("subscriptionProvider") String subscriptionProvider);
+
+        /**
+         * 사용자의 모든 고정비 삭제 (회원 탈퇴용)
+         */
+        void deleteByUserUserId(UUID userId);
 }

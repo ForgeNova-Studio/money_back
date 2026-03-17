@@ -147,4 +147,9 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         @Param("bookId") UUID bookId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+        /**
+         * 사용자의 모든 수입 삭제 (회원 탈퇴용)
+         */
+        void deleteByUserUserId(UUID userId);
 }

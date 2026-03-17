@@ -1,10 +1,17 @@
 package com.moneyflow.service;
 
+import com.moneyflow.domain.accountbook.AccountBookMemberRepository;
 import com.moneyflow.domain.accountbook.AccountBookService;
+import com.moneyflow.domain.asset.AssetRepository;
+import com.moneyflow.domain.budget.BudgetRepository;
 import com.moneyflow.domain.couple.Couple;
 import com.moneyflow.domain.couple.CoupleRepository;
+import com.moneyflow.domain.expense.ExpenseRepository;
+import com.moneyflow.domain.income.IncomeRepository;
 import com.moneyflow.domain.notification.Notification;
 import com.moneyflow.domain.notification.NotificationRepository;
+import com.moneyflow.domain.recurringexpense.RecurringExpenseRepository;
+import com.moneyflow.domain.terms.UserAgreementRepository;
 import com.moneyflow.domain.terms.TermsService;
 import com.moneyflow.domain.token.RefreshToken;
 import com.moneyflow.domain.token.RefreshTokenRepository;
@@ -74,6 +81,13 @@ public class AuthService {
     private final TermsService termsService;
     private final CoupleRepository coupleRepository;
     private final NotificationRepository notificationRepository;
+    private final ExpenseRepository expenseRepository;
+    private final IncomeRepository incomeRepository;
+    private final BudgetRepository budgetRepository;
+    private final RecurringExpenseRepository recurringExpenseRepository;
+    private final AssetRepository assetRepository;
+    private final UserAgreementRepository userAgreementRepository;
+    private final AccountBookMemberRepository accountBookMemberRepository;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -817,7 +831,8 @@ public class AuthService {
      *
      * 1. 이메일 회원: 비밀번호 확인
      * 2. 커플 파트너에게 알림 (있는 경우)
-     * 3. 사용자 삭제 (CASCADE로 관련 데이터 자동 삭제)
+     * 3. 관련 데이터 수동 삭제 (DB에 CASCADE 미설정)
+     * 4. 사용자 삭제
      *
      * @param userId 탈퇴할 사용자 ID
      * @param request 탈퇴 요청 (비밀번호, 사유)
@@ -841,10 +856,61 @@ public class AuthService {
             log.info("회원 탈퇴 사유: userId={}, reason={}", userId, request.getReason());
         }
 
-        // 사용자 삭제 (CASCADE로 관련 데이터 자동 삭제)
+        // 관련 데이터 삭제 (순서 중요: FK 의존성 고려)
+        deleteUserRelatedData(userId);
+
+        // 사용자 삭제
         userRepository.delete(user);
 
         log.info("회원 탈퇴 완료: userId={}, email={}", userId, user.getEmail());
+    }
+
+    /**
+     * 사용자 관련 모든 데이터 삭제
+     * FK 의존성 순서에 따라 삭제 (하위 → 상위)
+     */
+    private void deleteUserRelatedData(UUID userId) {
+        // 1. Refresh Token 삭제
+        refreshTokenRepository.deleteByUserId(userId);
+        log.debug("Refresh Token 삭제 완료: userId={}", userId);
+
+        // 2. 알림 삭제
+        notificationRepository.deleteByUserUserId(userId);
+        log.debug("알림 삭제 완료: userId={}", userId);
+
+        // 3. 약관 동의 이력 삭제
+        userAgreementRepository.deleteByUserUserId(userId);
+        log.debug("약관 동의 이력 삭제 완료: userId={}", userId);
+
+        // 4. 지출/수입/예산/고정비/자산 삭제
+        expenseRepository.deleteByUserUserId(userId);
+        log.debug("지출 삭제 완료: userId={}", userId);
+
+        incomeRepository.deleteByUserUserId(userId);
+        log.debug("수입 삭제 완료: userId={}", userId);
+
+        budgetRepository.deleteByUserUserId(userId);
+        log.debug("예산 삭제 완료: userId={}", userId);
+
+        recurringExpenseRepository.deleteByUserUserId(userId);
+        log.debug("고정비 삭제 완료: userId={}", userId);
+
+        assetRepository.deleteByUserUserId(userId);
+        log.debug("자산 삭제 완료: userId={}", userId);
+
+        // 5. 가계부 멤버십 삭제
+        accountBookMemberRepository.deleteByUserUserId(userId);
+        log.debug("가계부 멤버십 삭제 완료: userId={}", userId);
+
+        // 6. 커플 관계 삭제
+        coupleRepository.findByUserId(userId).ifPresent(couple -> {
+            coupleRepository.delete(couple);
+            log.debug("커플 관계 삭제 완료: userId={}, coupleId={}", userId, couple.getCoupleId());
+        });
+
+        // 7. 인증 정보 삭제 (UserAuth)
+        userAuthRepository.deleteByUserUserId(userId);
+        log.debug("인증 정보 삭제 완료: userId={}", userId);
     }
 
     /**

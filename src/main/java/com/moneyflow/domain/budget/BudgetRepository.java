@@ -21,4 +21,9 @@ public interface BudgetRepository extends JpaRepository<Budget, UUID> {
      * 특정 예산이 사용자의 것인지 확인
      */
     boolean existsByBudgetIdAndUserUserId(UUID budgetId, UUID userId);
+
+    /**
+     * 사용자의 모든 예산 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(UUID userId);
 }

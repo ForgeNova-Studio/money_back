@@ -40,4 +40,9 @@ public interface UserAgreementRepository extends JpaRepository<UserAgreement, UU
         DocumentType documentType,
         String documentVersion
     );
+
+    /**
+     * 사용자의 모든 약관 동의 이력 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(java.util.UUID userId);
 }

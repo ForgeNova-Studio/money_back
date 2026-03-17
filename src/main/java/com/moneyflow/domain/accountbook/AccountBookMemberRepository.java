@@ -43,4 +43,9 @@ public interface AccountBookMemberRepository extends JpaRepository<AccountBookMe
      */
     @Query("SELECT COUNT(m) FROM AccountBookMember m WHERE m.accountBook.accountBookId = :accountBookId")
     long countByAccountBookId(@Param("accountBookId") UUID accountBookId);
+
+    /**
+     * 사용자의 모든 멤버십 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(UUID userId);
 }

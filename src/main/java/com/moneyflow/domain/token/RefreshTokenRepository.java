@@ -84,4 +84,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      */
     @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.user.userId = :userId AND rt.revoked = false")
     long countValidTokensByUserId(@Param("userId") UUID userId);
+
+    /**
+     * 사용자의 모든 토큰 삭제 (회원 탈퇴용)
+     *
+     * @param userId 사용자 ID
+     */
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.user.userId = :userId")
+    void deleteByUserId(@Param("userId") UUID userId);
 }

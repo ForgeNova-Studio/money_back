@@ -52,4 +52,9 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
      */
     @Query("SELECT COALESCE(SUM(a.amount), 0) FROM Asset a WHERE a.accountBook.accountBookId = :accountBookId")
     BigDecimal sumTotalAmountByAccountBook(@Param("accountBookId") UUID accountBookId);
+
+    /**
+     * 사용자의 모든 자산 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(UUID userId);
 }

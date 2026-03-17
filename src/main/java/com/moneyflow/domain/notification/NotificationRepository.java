@@ -29,4 +29,9 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
      */
     Page<Notification> findAllByUserUserIdAndCreatedAtAfterOrderByCreatedAtDesc(
             UUID userId, LocalDateTime after, Pageable pageable);
+
+    /**
+     * 사용자의 모든 알림 삭제 (회원 탈퇴용)
+     */
+    void deleteByUserUserId(UUID userId);
 }
