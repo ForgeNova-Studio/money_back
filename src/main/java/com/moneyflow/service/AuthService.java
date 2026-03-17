@@ -1,6 +1,7 @@
 package com.moneyflow.service;
 
 import com.moneyflow.domain.accountbook.AccountBookService;
+import com.moneyflow.domain.terms.TermsService;
 import com.moneyflow.domain.token.RefreshToken;
 import com.moneyflow.domain.token.RefreshTokenRepository;
 import com.moneyflow.domain.user.AuthProvider;
@@ -65,6 +66,7 @@ public class AuthService {
     private final EmailService emailService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AccountBookService accountBookService;
+    private final TermsService termsService;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -103,6 +105,11 @@ public class AuthService {
         userAuthRepository.save(emailAuth);
 
         accountBookService.createDefaultAccountBookIfMissing(user);
+
+        // 약관 동의 저장
+        if (request.getAgreements() != null && !request.getAgreements().isEmpty()) {
+            termsService.saveAgreements(user, request.getAgreements(), null, null);
+        }
 
         // 사용한 인증 정보 삭제 (재사용 방지)
         emailVerificationRepository.delete(verification);
