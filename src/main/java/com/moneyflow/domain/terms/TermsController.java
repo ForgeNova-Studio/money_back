@@ -1,6 +1,5 @@
 package com.moneyflow.domain.terms;
 
-import com.moneyflow.domain.user.User;
 import com.moneyflow.dto.request.AgreementDto;
 import com.moneyflow.dto.response.TermsDocumentResponse;
 import com.moneyflow.dto.response.UserAgreementResponse;
@@ -11,10 +10,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 약관 관리 컨트롤러
@@ -36,22 +37,24 @@ public class TermsController {
     @GetMapping("/users/me/agreements")
     @Operation(summary = "내 약관 동의 이력 조회", description = "로그인한 사용자의 약관 동의 이력 조회")
     public ResponseEntity<List<UserAgreementResponse>> getMyAgreements(
-        @AuthenticationPrincipal User user
+        @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(termsService.getUserAgreements(user));
+        UUID userId = UUID.fromString(userDetails.getUsername());
+        return ResponseEntity.ok(termsService.getUserAgreements(userId));
     }
 
     @PostMapping("/users/me/agreements")
     @Operation(summary = "약관 재동의", description = "약관 버전 변경 시 재동의")
     public ResponseEntity<Void> consentAgreements(
-        @AuthenticationPrincipal User user,
+        @AuthenticationPrincipal UserDetails userDetails,
         @Valid @RequestBody List<AgreementDto> agreements,
         HttpServletRequest request
     ) {
+        UUID userId = UUID.fromString(userDetails.getUsername());
         String ipAddress = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
 
-        termsService.saveAgreements(user, agreements, ipAddress, userAgent);
+        termsService.saveAgreements(userId, agreements, ipAddress, userAgent);
 
         return ResponseEntity.ok().build();
     }
@@ -59,10 +62,11 @@ public class TermsController {
     @PatchMapping("/users/me/marketing-consent")
     @Operation(summary = "마케팅 수신 동의 변경", description = "설정 화면에서 마케팅 수신 동의/거부")
     public ResponseEntity<Void> updateMarketingConsent(
-        @AuthenticationPrincipal User user,
+        @AuthenticationPrincipal UserDetails userDetails,
         @RequestBody Map<String, Boolean> request,
         HttpServletRequest httpRequest
     ) {
+        UUID userId = UUID.fromString(userDetails.getUsername());
         Boolean agreed = request.get("agreed");
         if (agreed == null) {
             throw new IllegalArgumentException("agreed 필드는 필수입니다.");
@@ -71,7 +75,7 @@ public class TermsController {
         String ipAddress = getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
-        termsService.updateMarketingConsent(user, agreed, ipAddress, userAgent);
+        termsService.updateMarketingConsent(userId, agreed, ipAddress, userAgent);
 
         return ResponseEntity.ok().build();
     }

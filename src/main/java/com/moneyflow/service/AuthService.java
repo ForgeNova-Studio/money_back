@@ -108,7 +108,7 @@ public class AuthService {
 
         // 약관 동의 저장
         if (request.getAgreements() != null && !request.getAgreements().isEmpty()) {
-            termsService.saveAgreements(user, request.getAgreements(), null, null);
+            termsService.saveAgreements(user.getUserId(), request.getAgreements(), null, null);
         }
 
         // 사용한 인증 정보 삭제 (재사용 방지)

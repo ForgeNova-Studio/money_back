@@ -1,16 +1,19 @@
 package com.moneyflow.domain.terms;
 
 import com.moneyflow.domain.user.User;
+import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.AgreementDto;
 import com.moneyflow.dto.response.TermsDocumentResponse;
 import com.moneyflow.dto.response.UserAgreementResponse;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -24,6 +27,7 @@ public class TermsService {
 
     private final TermsDocumentRepository termsDocumentRepository;
     private final UserAgreementRepository userAgreementRepository;
+    private final UserRepository userRepository;
 
     /**
      * 현재 유효한 모든 약관 조회
@@ -38,7 +42,9 @@ public class TermsService {
     /**
      * 사용자의 약관 동의 이력 조회
      */
-    public List<UserAgreementResponse> getUserAgreements(User user) {
+    public List<UserAgreementResponse> getUserAgreements(UUID userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         return userAgreementRepository.findByUserOrderByAgreedAtDesc(user)
             .stream()
             .map(UserAgreementResponse::from)
@@ -48,18 +54,21 @@ public class TermsService {
     /**
      * 약관 동의 저장
      *
-     * @param user 사용자
+     * @param userId 사용자 ID
      * @param agreements 동의 목록
      * @param ipAddress IP 주소 (선택)
      * @param userAgent User-Agent (선택)
      */
     @Transactional
     public void saveAgreements(
-        User user,
+        UUID userId,
         List<AgreementDto> agreements,
         String ipAddress,
         String userAgent
     ) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         // 필수 약관 검증
         validateRequiredAgreements(agreements);
 
@@ -99,14 +108,17 @@ public class TermsService {
             userAgreementRepository.save(userAgreement);
         }
 
-        log.info("약관 동의 저장 완료: userId={}, agreementCount={}", user.getUserId(), agreements.size());
+        log.info("약관 동의 저장 완료: userId={}, agreementCount={}", userId, agreements.size());
     }
 
     /**
      * 마케팅 수신 동의 변경
      */
     @Transactional
-    public void updateMarketingConsent(User user, Boolean agreed, String ipAddress, String userAgent) {
+    public void updateMarketingConsent(UUID userId, Boolean agreed, String ipAddress, String userAgent) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         // 현재 유효한 마케팅 약관 조회
         TermsDocument marketingTerms = termsDocumentRepository
             .findByTypeAndIsActiveTrue(DocumentType.MARKETING)
@@ -133,7 +145,7 @@ public class TermsService {
 
         userAgreementRepository.save(userAgreement);
 
-        log.info("마케팅 수신 동의 변경: userId={}, agreed={}", user.getUserId(), agreed);
+        log.info("마케팅 수신 동의 변경: userId={}, agreed={}", userId, agreed);
     }
 
     /**
