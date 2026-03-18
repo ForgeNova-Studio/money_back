@@ -57,6 +57,13 @@ public class EmailVerification {
     private Boolean verified = false;
 
     /**
+     * 인증 코드 실패 시도 횟수
+     */
+    @Column(name = "attempt_count", nullable = false)
+    @Builder.Default
+    private Integer attemptCount = 0;
+
+    /**
      * 만료 시간 (생성 시간 + 10분)
      */
     @Column(name = "expires_at", nullable = false)
@@ -96,6 +103,20 @@ public class EmailVerification {
     public void markAsVerified() {
         this.verified = true;
         this.verifiedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 인증 실패 횟수 증가
+     */
+    public void incrementAttemptCount() {
+        this.attemptCount = (attemptCount == null ? 0 : attemptCount) + 1;
+    }
+
+    /**
+     * 허용 시도 횟수를 초과했는지 확인
+     */
+    public boolean hasExceededAttempts(int maxAttempts) {
+        return (attemptCount == null ? 0 : attemptCount) >= maxAttempts;
     }
 
     /**

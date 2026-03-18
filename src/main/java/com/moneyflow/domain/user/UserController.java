@@ -3,6 +3,7 @@ package com.moneyflow.domain.user;
 import com.moneyflow.dto.request.WithdrawRequest;
 import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.service.AuthService;
+import com.moneyflow.service.UserWithdrawalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -29,6 +30,7 @@ import java.util.UUID;
 public class UserController {
 
     private final AuthService authService;
+    private final UserWithdrawalService userWithdrawalService;
 
     @GetMapping("/me")
     @Operation(
@@ -101,7 +103,7 @@ public class UserController {
             @RequestBody WithdrawRequest request
     ) {
         UUID userId = UUID.fromString(userDetails.getUsername());
-        authService.withdrawUser(userId, request);
+        userWithdrawalService.withdraw(userId, request);
         return ResponseEntity.ok().build();
     }
 }

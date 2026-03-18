@@ -23,6 +23,12 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
             String email, EmailVerification.VerificationType verificationType);
 
     /**
+     * 이메일과 인증 유형으로 최근 인증 정보 조회
+     */
+    Optional<EmailVerification> findFirstByEmailAndVerificationTypeOrderByCreatedAtDesc(
+            String email, EmailVerification.VerificationType verificationType);
+
+    /**
      * 만료된 인증 코드 일괄 삭제 (배치 작업용)
      */
     void deleteByExpiresAtBefore(LocalDateTime dateTime);
