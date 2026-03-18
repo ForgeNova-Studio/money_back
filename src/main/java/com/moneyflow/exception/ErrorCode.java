@@ -32,6 +32,7 @@ public enum ErrorCode {
     // ===== 사용자 (USER) =====
     USER_NOT_FOUND("U001", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     INVALID_PASSWORD("U002", "비밀번호가 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+    INVALID_NICKNAME("U003", "유효하지 않은 닉네임입니다", HttpStatus.BAD_REQUEST),
 
     // ===== 장부 (ACCOUNT_BOOK) =====
     ACCOUNT_BOOK_NOT_FOUND("AB001", "장부를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
