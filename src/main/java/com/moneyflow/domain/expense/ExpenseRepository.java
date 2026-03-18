@@ -2,6 +2,7 @@ package com.moneyflow.domain.expense;
 
 import com.moneyflow.dto.projection.CategorySummary;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -158,5 +159,14 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
         /**
          * 사용자의 모든 지출 삭제 (회원 탈퇴용)
          */
-        void deleteByUserUserId(UUID userId);
+        @Modifying
+        @Query("DELETE FROM Expense e WHERE e.user.userId = :userId")
+        void deleteByUserUserId(@Param("userId") UUID userId);
+
+        /**
+         * 특정 장부들의 모든 지출 삭제 (회원 탈퇴용)
+         */
+        @Modifying
+        @Query(value = "DELETE FROM expenses WHERE account_book_id IN (:accountBookIds)", nativeQuery = true)
+        void deleteByAccountBookIdIn(@Param("accountBookIds") List<UUID> accountBookIds);
 }

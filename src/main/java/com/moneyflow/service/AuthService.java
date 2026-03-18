@@ -1,6 +1,7 @@
 package com.moneyflow.service;
 
 import com.moneyflow.domain.accountbook.AccountBookMemberRepository;
+import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.accountbook.AccountBookService;
 import com.moneyflow.domain.asset.AssetRepository;
 import com.moneyflow.domain.budget.BudgetRepository;
@@ -88,6 +89,7 @@ public class AuthService {
     private final AssetRepository assetRepository;
     private final UserAgreementRepository userAgreementRepository;
     private final AccountBookMemberRepository accountBookMemberRepository;
+    private final AccountBookRepository accountBookRepository;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -870,6 +872,34 @@ public class AuthService {
      * FK 의존성 순서에 따라 삭제 (하위 → 상위)
      */
     private void deleteUserRelatedData(UUID userId) {
+        // 0. 사용자가 생성한 가계부 처리 (created_by NOT NULL 제약조건 해결)
+        List<UUID> createdAccountBookIds = accountBookRepository.findAccountBookIdsByCreatedByUserId(userId);
+        if (!createdAccountBookIds.isEmpty()) {
+            log.debug("사용자가 생성한 가계부 삭제 시작: userId={}, count={}", userId, createdAccountBookIds.size());
+
+            // 가계부 관련 데이터 먼저 삭제
+            expenseRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 지출 삭제 완료: accountBookIds={}", createdAccountBookIds);
+
+            incomeRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 수입 삭제 완료: accountBookIds={}", createdAccountBookIds);
+
+            budgetRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 예산 삭제 완료: accountBookIds={}", createdAccountBookIds);
+
+            // recurring_expenses에는 account_book_id 없음 - 호출 제거
+
+            assetRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 자산 삭제 완료: accountBookIds={}", createdAccountBookIds);
+
+            accountBookMemberRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 멤버십 삭제 완료: accountBookIds={}", createdAccountBookIds);
+
+            // 가계부 삭제
+            accountBookRepository.deleteByAccountBookIdIn(createdAccountBookIds);
+            log.debug("가계부 삭제 완료: accountBookIds={}", createdAccountBookIds);
+        }
+
         // 1. Refresh Token 삭제
         refreshTokenRepository.deleteByUserId(userId);
         log.debug("Refresh Token 삭제 완료: userId={}", userId);
@@ -882,7 +912,7 @@ public class AuthService {
         userAgreementRepository.deleteByUserUserId(userId);
         log.debug("약관 동의 이력 삭제 완료: userId={}", userId);
 
-        // 4. 지출/수입/예산/고정비/자산 삭제
+        // 4. 지출/수입/예산/고정비/자산 삭제 (user_id 기준 - 다른 장부의 데이터)
         expenseRepository.deleteByUserUserId(userId);
         log.debug("지출 삭제 완료: userId={}", userId);
 
@@ -898,7 +928,7 @@ public class AuthService {
         assetRepository.deleteByUserUserId(userId);
         log.debug("자산 삭제 완료: userId={}", userId);
 
-        // 5. 가계부 멤버십 삭제
+        // 5. 가계부 멤버십 삭제 (다른 사람이 만든 장부에서의 멤버십)
         accountBookMemberRepository.deleteByUserUserId(userId);
         log.debug("가계부 멤버십 삭제 완료: userId={}", userId);
 

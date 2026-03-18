@@ -33,5 +33,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     /**
      * 사용자의 모든 알림 삭제 (회원 탈퇴용)
      */
-    void deleteByUserUserId(UUID userId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Notification n WHERE n.user.userId = :userId")
+    void deleteByUserUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
 }

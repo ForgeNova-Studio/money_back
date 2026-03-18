@@ -44,5 +44,7 @@ public interface UserAgreementRepository extends JpaRepository<UserAgreement, UU
     /**
      * 사용자의 모든 약관 동의 이력 삭제 (회원 탈퇴용)
      */
-    void deleteByUserUserId(java.util.UUID userId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM UserAgreement ua WHERE ua.user.userId = :userId")
+    void deleteByUserUserId(@org.springframework.data.repository.query.Param("userId") java.util.UUID userId);
 }

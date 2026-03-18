@@ -193,5 +193,8 @@ public interface RecurringExpenseRepository extends JpaRepository<RecurringExpen
         /**
          * 사용자의 모든 고정비 삭제 (회원 탈퇴용)
          */
-        void deleteByUserUserId(UUID userId);
+        @org.springframework.data.jpa.repository.Modifying
+        @Query("DELETE FROM RecurringExpense r WHERE r.user.userId = :userId")
+        void deleteByUserUserId(@Param("userId") UUID userId);
+
 }

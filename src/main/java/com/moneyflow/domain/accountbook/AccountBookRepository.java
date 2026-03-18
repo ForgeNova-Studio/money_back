@@ -123,4 +123,17 @@ public interface AccountBookRepository extends JpaRepository<AccountBook, UUID> 
         Optional<AccountBook> findByIdAndMemberUserId(
                         @Param("accountBookId") UUID accountBookId,
                         @Param("userId") UUID userId);
+
+        /**
+         * 사용자가 생성한 장부 ID 목록 조회 (회원 탈퇴용)
+         */
+        @Query("SELECT ab.accountBookId FROM AccountBook ab WHERE ab.createdBy.userId = :userId")
+        List<UUID> findAccountBookIdsByCreatedByUserId(@Param("userId") UUID userId);
+
+        /**
+         * 장부 ID 목록으로 장부 삭제 (회원 탈퇴용)
+         */
+        @org.springframework.data.jpa.repository.Modifying
+        @Query("DELETE FROM AccountBook ab WHERE ab.accountBookId IN :accountBookIds")
+        void deleteByAccountBookIdIn(@Param("accountBookIds") List<UUID> accountBookIds);
 }

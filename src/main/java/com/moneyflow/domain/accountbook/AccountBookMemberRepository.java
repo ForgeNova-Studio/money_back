@@ -1,6 +1,7 @@
 package com.moneyflow.domain.accountbook;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -47,5 +48,14 @@ public interface AccountBookMemberRepository extends JpaRepository<AccountBookMe
     /**
      * 사용자의 모든 멤버십 삭제 (회원 탈퇴용)
      */
-    void deleteByUserUserId(UUID userId);
+    @Modifying
+    @Query("DELETE FROM AccountBookMember m WHERE m.user.userId = :userId")
+    void deleteByUserUserId(@Param("userId") UUID userId);
+
+    /**
+     * 특정 장부들의 모든 멤버십 삭제 (회원 탈퇴용)
+     */
+    @Modifying
+    @Query(value = "DELETE FROM account_book_members WHERE account_book_id IN (:accountBookIds)", nativeQuery = true)
+    void deleteByAccountBookIdIn(@Param("accountBookIds") List<UUID> accountBookIds);
 }

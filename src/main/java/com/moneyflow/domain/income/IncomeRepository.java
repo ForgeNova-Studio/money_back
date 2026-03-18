@@ -2,6 +2,7 @@ package com.moneyflow.domain.income;
 
 import com.moneyflow.dto.projection.CategorySummary;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -151,5 +152,14 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
         /**
          * 사용자의 모든 수입 삭제 (회원 탈퇴용)
          */
-        void deleteByUserUserId(UUID userId);
+        @Modifying
+        @Query("DELETE FROM Income i WHERE i.user.userId = :userId")
+        void deleteByUserUserId(@Param("userId") UUID userId);
+
+        /**
+         * 특정 장부들의 모든 수입 삭제 (회원 탈퇴용)
+         */
+        @Modifying
+        @Query(value = "DELETE FROM incomes WHERE account_book_id IN (:accountBookIds)", nativeQuery = true)
+        void deleteByAccountBookIdIn(@Param("accountBookIds") List<UUID> accountBookIds);
 }

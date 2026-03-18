@@ -36,5 +36,7 @@ public interface UserAuthRepository extends JpaRepository<UserAuth, UUID> {
     /**
      * 사용자의 모든 인증 정보 삭제 (회원 탈퇴용)
      */
-    void deleteByUserUserId(UUID userId);
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM UserAuth ua WHERE ua.user.userId = :userId")
+    void deleteByUserUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
 }
