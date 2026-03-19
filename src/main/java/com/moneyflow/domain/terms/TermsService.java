@@ -66,8 +66,15 @@ public class TermsService {
         String ipAddress,
         String userAgent
     ) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (user.getUserId() == null) {
+            log.error("User found but userId is null: email={}", user.getEmail());
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
 
         // 필수 약관 검증
         validateRequiredAgreements(agreements);

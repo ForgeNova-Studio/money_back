@@ -50,6 +50,9 @@ public class TermsController {
         @Valid @RequestBody List<AgreementDto> agreements,
         HttpServletRequest request
     ) {
+        if (userDetails == null || userDetails.getUsername() == null) {
+            throw new com.moneyflow.exception.UnauthorizedException("인증 정보가 없습니다");
+        }
         UUID userId = UUID.fromString(userDetails.getUsername());
         String ipAddress = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
