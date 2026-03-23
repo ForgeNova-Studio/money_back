@@ -17,5 +17,6 @@ public class TransactionDto {
     private String title;    // 사용자 입력 설명 (지출: merchant ?? category, 수입: description ?? source)
     private String category; // 카테고리 코드 (지출: category, 수입: source)
     private String memo;     // 추가 메모 (지출: memo, 수입: null)
+    private String date;     // "2026-03-15" (검색 결과에서 사용, 홈 월간 데이터에서는 null)
     private String time;     // "14:30" (현재는 빈 문자열, 향후 확장 가능)
 }

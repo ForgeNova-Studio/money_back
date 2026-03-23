@@ -150,6 +150,18 @@ public interface IncomeRepository extends JpaRepository<Income, UUID> {
                         @Param("endDate") LocalDate endDate);
 
         /**
+         * 출처 또는 설명으로 수입 검색 (전체 기간, 대소문자 무관)
+         * - keyword는 서비스에서 "%keyword%" 형식으로 전달
+         */
+        @Query("SELECT i FROM Income i " +
+                        "WHERE i.accountBook.accountBookId = :accountBookId " +
+                        "AND (LOWER(i.source) LIKE :keyword OR LOWER(i.description) LIKE :keyword) " +
+                        "ORDER BY i.date DESC, i.createdAt DESC")
+        List<Income> searchByKeyword(
+                        @Param("accountBookId") UUID accountBookId,
+                        @Param("keyword") String keyword);
+
+        /**
          * 사용자의 모든 수입 삭제 (회원 탈퇴용)
          */
         @Modifying

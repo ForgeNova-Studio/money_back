@@ -6,6 +6,7 @@ import com.moneyflow.domain.income.Income;
 import com.moneyflow.domain.income.IncomeRepository;
 import com.moneyflow.domain.accountbook.AccountBookMemberRepository;
 import com.moneyflow.dto.response.DailySummaryDto;
+import com.moneyflow.dto.response.SearchResponse;
 import com.moneyflow.dto.response.TransactionDto;
 import com.moneyflow.exception.BusinessException;
 import com.moneyflow.exception.ErrorCode;
@@ -108,5 +109,72 @@ public class HomeService {
         }
 
         return resultMap; // 프론트엔드가 원하는 Map 형태 반환
+    }
+
+    public SearchResponse searchTransactions(
+            UUID userId,
+            UUID accountBookId,
+            String keyword,
+            int page,
+            int size) {
+        if (!accountBookMemberRepository
+                .existsByAccountBookAccountBookIdAndUserUserId(accountBookId, userId)) {
+            throw new BusinessException(ErrorCode.ACCOUNT_BOOK_ACCESS_DENIED);
+        }
+
+        // 키워드를 소문자 LIKE 패턴으로 변환 ("%스타벅스%")
+        String likeKeyword = "%" + keyword.toLowerCase() + "%";
+
+        // 지출 검색
+        List<Expense> expenses = expenseRepository.searchByKeyword(accountBookId, likeKeyword);
+        // 수입 검색
+        List<Income> incomes = incomeRepository.searchByKeyword(accountBookId, likeKeyword);
+
+        // 지출과 수입을 TransactionDto로 통합
+        List<TransactionDto> allTransactions = new ArrayList<>();
+
+        for (Expense expense : expenses) {
+            allTransactions.add(TransactionDto.builder()
+                    .id(expense.getExpenseId().toString())
+                    .type("EXPENSE")
+                    .amount(expense.getAmount().longValue())
+                    .title(expense.getMerchant() != null ? expense.getMerchant() : expense.getCategory())
+                    .category(expense.getCategory())
+                    .memo(expense.getMemo())
+                    .date(expense.getDate().toString())
+                    .time("")
+                    .build());
+        }
+
+        for (Income income : incomes) {
+            allTransactions.add(TransactionDto.builder()
+                    .id(income.getIncomeId().toString())
+                    .type("INCOME")
+                    .amount(income.getAmount().longValue())
+                    .title(income.getDescription() != null ? income.getDescription() : income.getSource())
+                    .category(income.getSource())
+                    .memo(null)
+                    .date(income.getDate().toString())
+                    .time("")
+                    .build());
+        }
+
+        // 날짜 역순 정렬
+        allTransactions.sort(Comparator.comparing(TransactionDto::getDate).reversed());
+
+        // 페이지네이션 적용
+        int totalCount = allTransactions.size();
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, totalCount);
+
+        List<TransactionDto> pagedTransactions = fromIndex >= totalCount
+                ? Collections.emptyList()
+                : allTransactions.subList(fromIndex, toIndex);
+
+        return SearchResponse.builder()
+                .transactions(pagedTransactions)
+                .totalCount(totalCount)
+                .hasNext(toIndex < totalCount)
+                .build();
     }
 }

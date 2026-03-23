@@ -157,6 +157,18 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
                         @Param("endDate") LocalDate endDate);
 
         /**
+         * 가맹점명 또는 메모로 지출 검색 (전체 기간, 대소문자 무관)
+         * - keyword는 서비스에서 "%keyword%" 형식으로 전달
+         */
+        @Query("SELECT e FROM Expense e " +
+                        "WHERE e.accountBook.accountBookId = :accountBookId " +
+                        "AND (LOWER(e.merchant) LIKE :keyword OR LOWER(e.memo) LIKE :keyword) " +
+                        "ORDER BY e.date DESC, e.createdAt DESC")
+        List<Expense> searchByKeyword(
+                        @Param("accountBookId") UUID accountBookId,
+                        @Param("keyword") String keyword);
+
+        /**
          * 사용자의 모든 지출 삭제 (회원 탈퇴용)
          */
         @Modifying

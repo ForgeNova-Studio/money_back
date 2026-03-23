@@ -1,6 +1,7 @@
 package com.moneyflow.controller;
 
 import com.moneyflow.dto.response.DailySummaryDto;
+import com.moneyflow.dto.response.SearchResponse;
 import com.moneyflow.service.HomeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,5 +46,24 @@ public class HomeController {
         Map<String, DailySummaryDto> data =
                 homeService.getMonthlyData(userId, accountBookId, year, month);
         return ResponseEntity.ok(data);
+    }
+
+    @Operation(summary = "거래 내역 검색", description = "전체 기간의 지출/수입을 가맹점명·메모·출처·설명으로 검색 (대소문자 무관)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "검색 성공"),
+            @ApiResponse(responseCode = "400", description = "keyword가 비어있거나 accountBookId 누락"),
+            @ApiResponse(responseCode = "403", description = "장부 접근 권한 없음")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<SearchResponse> searchTransactions(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam @NotBlank String keyword,
+            @RequestParam UUID accountBookId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        UUID userId = UUID.fromString(userDetails.getUsername());
+        SearchResponse response = homeService.searchTransactions(userId, accountBookId, keyword, page, size);
+        return ResponseEntity.ok(response);
     }
 }
