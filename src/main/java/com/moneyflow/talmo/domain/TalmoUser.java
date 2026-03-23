@@ -27,6 +27,9 @@ public class TalmoUser {
     @Column(name = "kakao_refresh_token", length = 500)
     private String kakaoRefreshToken;
 
+    @Column(name = "notification_enabled", nullable = false)
+    private boolean notificationEnabled = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -38,6 +41,7 @@ public class TalmoUser {
     @Builder
     public TalmoUser(String name) {
         this.name = name;
+        this.notificationEnabled = true;
     }
 
     public void updateName(String name) {
@@ -51,5 +55,9 @@ public class TalmoUser {
 
     public boolean hasKakaoToken() {
         return this.kakaoRefreshToken != null && !this.kakaoRefreshToken.isEmpty();
+    }
+
+    public void setNotificationEnabled(boolean enabled) {
+        this.notificationEnabled = enabled;
     }
 }

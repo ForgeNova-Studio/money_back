@@ -12,4 +12,6 @@ public interface TalmoUserRepository extends JpaRepository<TalmoUser, Long> {
     boolean existsByName(String name);
 
     List<TalmoUser> findByKakaoRefreshTokenIsNotNull();
+
+    List<TalmoUser> findByKakaoRefreshTokenIsNotNullAndNotificationEnabledTrue();
 }

@@ -30,6 +30,13 @@ public class TalmoController {
         return ResponseEntity.ok(talmoService.updateUserName(id, request));
     }
 
+    @PutMapping("/users/{id}/notification")
+    public ResponseEntity<TalmoUserResponse> setNotification(
+            @PathVariable Long id,
+            @RequestParam boolean enabled) {
+        return ResponseEntity.ok(talmoService.setNotificationEnabled(id, enabled));
+    }
+
     @GetMapping("/users")
     public ResponseEntity<List<TalmoUserResponse>> getUsers() {
         return ResponseEntity.ok(talmoService.getAllUsers());

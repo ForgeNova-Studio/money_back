@@ -90,8 +90,8 @@ public class TalmoScheduler {
     }
 
     public void checkAndNotify(String timeSlot) {
-        // 1. 카카오 연동된 전체 유저 조회
-        List<TalmoUser> kakaoUsers = userRepository.findByKakaoRefreshTokenIsNotNull();
+        // 1. 카카오 연동 + 알림 활성화된 유저 조회
+        List<TalmoUser> kakaoUsers = userRepository.findByKakaoRefreshTokenIsNotNullAndNotificationEnabledTrue();
         if (kakaoUsers.isEmpty()) {
             log.info("카카오 연동 유저 없음, 스킵");
             return;

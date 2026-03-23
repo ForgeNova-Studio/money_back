@@ -69,6 +69,14 @@ public class TalmoService {
         return TalmoUserResponse.from(user);
     }
 
+    @Transactional
+    public TalmoUserResponse setNotificationEnabled(Long userId, boolean enabled) {
+        TalmoUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다: " + userId));
+        user.setNotificationEnabled(enabled);
+        return TalmoUserResponse.from(user);
+    }
+
     public List<TalmoUserResponse> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(TalmoUserResponse::from)
@@ -370,7 +378,7 @@ public class TalmoService {
         LocalDateTime startOfDay = LocalDate.now().atTime(LocalTime.MIN);
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
 
-        List<TalmoUser> recipients = userRepository.findByKakaoRefreshTokenIsNotNull().stream()
+        List<TalmoUser> recipients = userRepository.findByKakaoRefreshTokenIsNotNullAndNotificationEnabledTrue().stream()
                 .filter(user -> !user.getId().equals(problem.getUser().getId()))
                 .filter(user -> !problemRepository.existsByUserIdAndCreatedAtBetween(user.getId(), startOfDay, endOfDay))
                 .toList();
@@ -424,6 +432,11 @@ public class TalmoService {
         }
 
         if (!problem.getUser().hasKakaoToken()) {
+            analysis.markNotificationStatus("SKIPPED_NO_KAKAO", null);
+            return;
+        }
+
+        if (!problem.getUser().isNotificationEnabled()) {
             analysis.markNotificationStatus("SKIPPED_NO_KAKAO", null);
             return;
         }

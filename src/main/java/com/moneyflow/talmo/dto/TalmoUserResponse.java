@@ -9,11 +9,13 @@ import lombok.Getter;
 public class TalmoUserResponse {
     private Long id;
     private String name;
+    private boolean notificationEnabled;
 
     public static TalmoUserResponse from(TalmoUser user) {
         return TalmoUserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
+                .notificationEnabled(user.isNotificationEnabled())
                 .build();
     }
 }
