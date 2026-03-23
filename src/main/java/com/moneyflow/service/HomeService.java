@@ -10,6 +10,8 @@ import com.moneyflow.dto.response.SearchResponse;
 import com.moneyflow.dto.response.TransactionDto;
 import com.moneyflow.exception.BusinessException;
 import com.moneyflow.exception.ErrorCode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,9 @@ public class HomeService {
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
     private final AccountBookMemberRepository accountBookMemberRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public Map<String, DailySummaryDto> getMonthlyData(
             UUID userId,
@@ -111,6 +116,7 @@ public class HomeService {
         return resultMap; // 프론트엔드가 원하는 Map 형태 반환
     }
 
+    @SuppressWarnings("unchecked")
     public SearchResponse searchTransactions(
             UUID userId,
             UUID accountBookId,
@@ -122,59 +128,80 @@ public class HomeService {
             throw new BusinessException(ErrorCode.ACCOUNT_BOOK_ACCESS_DENIED);
         }
 
-        // 키워드를 소문자 LIKE 패턴으로 변환 ("%스타벅스%")
         String likeKeyword = "%" + keyword.toLowerCase() + "%";
+        String bookId = accountBookId.toString();
 
-        // 지출 검색
-        List<Expense> expenses = expenseRepository.searchByKeyword(accountBookId, likeKeyword);
-        // 수입 검색
-        List<Income> incomes = incomeRepository.searchByKeyword(accountBookId, likeKeyword);
+        // totalCount: DB에서 UNION ALL 전체 건수 조회
+        String countSql = """
+                SELECT COUNT(*) FROM (
+                  SELECT expense_id FROM expenses
+                  WHERE account_book_id = :bookId::uuid
+                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw OR LOWER(COALESCE(memo, '')) LIKE :kw)
+                  UNION ALL
+                  SELECT income_id FROM incomes
+                  WHERE account_book_id = :bookId::uuid
+                    AND (LOWER(COALESCE(source, '')) LIKE :kw OR LOWER(COALESCE(description, '')) LIKE :kw)
+                ) t
+                """;
 
-        // 지출과 수입을 TransactionDto로 통합
-        List<TransactionDto> allTransactions = new ArrayList<>();
+        long totalCount = ((Number) entityManager.createNativeQuery(countSql)
+                .setParameter("bookId", bookId)
+                .setParameter("kw", likeKeyword)
+                .getSingleResult()).longValue();
 
-        for (Expense expense : expenses) {
-            allTransactions.add(TransactionDto.builder()
-                    .id(expense.getExpenseId().toString())
-                    .type("EXPENSE")
-                    .amount(expense.getAmount().longValue())
-                    .title(expense.getMerchant() != null ? expense.getMerchant() : expense.getCategory())
-                    .category(expense.getCategory())
-                    .memo(expense.getMemo())
-                    .date(expense.getDate().toString())
-                    .time("")
-                    .build());
-        }
+        // 데이터: UNION ALL → 날짜 역순 → DB LIMIT/OFFSET
+        String dataSql = """
+                SELECT id, type, amount, title, category, memo, date FROM (
+                  SELECT CAST(expense_id AS VARCHAR) AS id,
+                         'EXPENSE'                  AS type,
+                         amount,
+                         COALESCE(merchant, category) AS title,
+                         category,
+                         memo,
+                         date
+                  FROM expenses
+                  WHERE account_book_id = :bookId::uuid
+                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw OR LOWER(COALESCE(memo, '')) LIKE :kw)
+                  UNION ALL
+                  SELECT CAST(income_id AS VARCHAR)      AS id,
+                         'INCOME'                        AS type,
+                         amount,
+                         COALESCE(description, source)   AS title,
+                         source                          AS category,
+                         NULL                            AS memo,
+                         date
+                  FROM incomes
+                  WHERE account_book_id = :bookId::uuid
+                    AND (LOWER(COALESCE(source, '')) LIKE :kw OR LOWER(COALESCE(description, '')) LIKE :kw)
+                ) t
+                ORDER BY t.date DESC
+                LIMIT :size OFFSET :offset
+                """;
 
-        for (Income income : incomes) {
-            allTransactions.add(TransactionDto.builder()
-                    .id(income.getIncomeId().toString())
-                    .type("INCOME")
-                    .amount(income.getAmount().longValue())
-                    .title(income.getDescription() != null ? income.getDescription() : income.getSource())
-                    .category(income.getSource())
-                    .memo(null)
-                    .date(income.getDate().toString())
-                    .time("")
-                    .build());
-        }
+        List<Object[]> rows = entityManager.createNativeQuery(dataSql)
+                .setParameter("bookId", bookId)
+                .setParameter("kw", likeKeyword)
+                .setParameter("size", size)
+                .setParameter("offset", (long) page * size)
+                .getResultList();
 
-        // 날짜 역순 정렬
-        allTransactions.sort(Comparator.comparing(TransactionDto::getDate).reversed());
+        List<TransactionDto> transactions = rows.stream().map(row -> TransactionDto.builder()
+                .id((String) row[0])
+                .type((String) row[1])
+                .amount(((Number) row[2]).longValue())
+                .title((String) row[3])
+                .category((String) row[4])
+                .memo((String) row[5])
+                .date(row[6].toString()) // java.sql.Date 또는 LocalDate 모두 "yyyy-MM-dd" 반환
+                .time("")
+                .build()).toList();
 
-        // 페이지네이션 적용
-        int totalCount = allTransactions.size();
-        int fromIndex = page * size;
-        int toIndex = Math.min(fromIndex + size, totalCount);
-
-        List<TransactionDto> pagedTransactions = fromIndex >= totalCount
-                ? Collections.emptyList()
-                : allTransactions.subList(fromIndex, toIndex);
+        boolean hasNext = (long) page * size + size < totalCount;
 
         return SearchResponse.builder()
-                .transactions(pagedTransactions)
-                .totalCount(totalCount)
-                .hasNext(toIndex < totalCount)
+                .transactions(transactions)
+                .totalCount((int) totalCount)
+                .hasNext(hasNext)
                 .build();
     }
 }

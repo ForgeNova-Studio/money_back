@@ -2,6 +2,8 @@ package com.moneyflow.controller;
 
 import com.moneyflow.dto.response.DailySummaryDto;
 import com.moneyflow.dto.response.SearchResponse;
+import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import com.moneyflow.service.HomeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -14,6 +16,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.NotBlank;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,13 +42,16 @@ public class HomeController {
             @RequestParam UUID accountBookId
     ) {
         UUID userId = UUID.fromString(userDetails.getUsername());
-        // yearMonth 파싱 (예: "2025-12" → year=2025, month=12)
-        String[] parts = yearMonth.split("-");
-        int year = Integer.parseInt(parts[0]);
-        int month = Integer.parseInt(parts[1]);
+        // yearMonth 파싱 (예: "2025-12") — 형식 오류 시 400 반환
+        YearMonth ym;
+        try {
+            ym = YearMonth.parse(yearMonth);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException("yearMonth 형식이 올바르지 않습니다 (예: 2025-12)", ErrorCode.INVALID_INPUT);
+        }
 
         Map<String, DailySummaryDto> data =
-                homeService.getMonthlyData(userId, accountBookId, year, month);
+                homeService.getMonthlyData(userId, accountBookId, ym.getYear(), ym.getMonthValue());
         return ResponseEntity.ok(data);
     }
 
