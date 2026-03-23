@@ -17,7 +17,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,15 +27,19 @@ public class User {
     @Column(name = "user_id")
     private UUID userId;
 
+    @Setter
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Setter
     @Column(nullable = false, length = 50)
     private String nickname;
 
+    @Setter
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", length = 10)
     private Gender gender;

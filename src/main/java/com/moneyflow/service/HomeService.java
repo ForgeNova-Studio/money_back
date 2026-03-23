@@ -14,6 +14,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -30,6 +31,7 @@ public class HomeService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Transactional(readOnly = true)
     public Map<String, DailySummaryDto> getMonthlyData(
             UUID userId,
             UUID accountBookId,
@@ -116,6 +118,7 @@ public class HomeService {
         return resultMap; // 프론트엔드가 원하는 Map 형태 반환
     }
 
+    @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public SearchResponse searchTransactions(
             UUID userId,
@@ -128,7 +131,7 @@ public class HomeService {
             throw new BusinessException(ErrorCode.ACCOUNT_BOOK_ACCESS_DENIED);
         }
 
-        String likeKeyword = "%" + keyword.toLowerCase() + "%";
+        String likeKeyword = "%" + escapeLikeKeyword(keyword.toLowerCase()) + "%";
         String bookId = accountBookId.toString();
 
         // totalCount: DB에서 UNION ALL 전체 건수 조회
@@ -136,11 +139,11 @@ public class HomeService {
                 SELECT COUNT(*) FROM (
                   SELECT expense_id FROM expenses
                   WHERE account_book_id = :bookId::uuid
-                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw OR LOWER(COALESCE(memo, '')) LIKE :kw)
+                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(memo, '')) LIKE :kw ESCAPE '\\')
                   UNION ALL
                   SELECT income_id FROM incomes
                   WHERE account_book_id = :bookId::uuid
-                    AND (LOWER(COALESCE(source, '')) LIKE :kw OR LOWER(COALESCE(description, '')) LIKE :kw)
+                    AND (LOWER(COALESCE(source, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(description, '')) LIKE :kw ESCAPE '\\')
                 ) t
                 """;
 
@@ -161,7 +164,7 @@ public class HomeService {
                          date
                   FROM expenses
                   WHERE account_book_id = :bookId::uuid
-                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw OR LOWER(COALESCE(memo, '')) LIKE :kw)
+                    AND (LOWER(COALESCE(merchant, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(memo, '')) LIKE :kw ESCAPE '\\')
                   UNION ALL
                   SELECT CAST(income_id AS VARCHAR)      AS id,
                          'INCOME'                        AS type,
@@ -172,7 +175,7 @@ public class HomeService {
                          date
                   FROM incomes
                   WHERE account_book_id = :bookId::uuid
-                    AND (LOWER(COALESCE(source, '')) LIKE :kw OR LOWER(COALESCE(description, '')) LIKE :kw)
+                    AND (LOWER(COALESCE(source, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(description, '')) LIKE :kw ESCAPE '\\')
                 ) t
                 ORDER BY t.date DESC
                 LIMIT :size OFFSET :offset
@@ -203,5 +206,16 @@ public class HomeService {
                 .totalCount((int) totalCount)
                 .hasNext(hasNext)
                 .build();
+    }
+
+    /**
+     * LIKE 패턴에 사용되는 특수문자를 이스케이프합니다.
+     * \ 를 먼저 처리해야 이중 이스케이프를 방지할 수 있습니다.
+     */
+    static String escapeLikeKeyword(String keyword) {
+        return keyword
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }
