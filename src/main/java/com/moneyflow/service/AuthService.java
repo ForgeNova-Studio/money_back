@@ -13,6 +13,7 @@ import com.moneyflow.dto.response.LoginResponse;
 import com.moneyflow.dto.response.RegisterResponse;
 import com.moneyflow.dto.response.UserInfoResponse;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import com.moneyflow.exception.ResourceNotFoundException;
 import com.moneyflow.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -114,7 +115,26 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("사용자를 찾을 수 없습니다"));
 
-        return UserInfoResponse.from(user);
+        boolean hasEmailAuth = userAuthRepository
+                .findByUserUserIdAndProvider(userId, AuthProvider.EMAIL)
+                .isPresent();
+
+        return UserInfoResponse.from(user, hasEmailAuth);
+    }
+
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        UserAuth emailAuth = userAuthRepository
+                .findByUserUserIdAndProvider(userId, AuthProvider.EMAIL)
+                .orElseThrow(() -> UnauthorizedException.accessDenied("소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다"));
+
+        if (!passwordEncoder.matches(currentPassword, emailAuth.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        emailAuth.setPasswordHash(passwordEncoder.encode(newPassword));
+        userAuthRepository.save(emailAuth);
+        log.info("사용자 비밀번호 변경 완료: userId={}", userId);
     }
 
     @Transactional(readOnly = true)

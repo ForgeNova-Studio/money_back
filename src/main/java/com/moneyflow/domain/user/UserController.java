@@ -1,5 +1,6 @@
 package com.moneyflow.domain.user;
 
+import com.moneyflow.dto.request.ChangePasswordWhileLoggedInRequest;
 import com.moneyflow.dto.request.NicknameUpdateRequest;
 import com.moneyflow.dto.request.WithdrawRequest;
 import com.moneyflow.dto.response.UserInfoResponse;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -110,6 +112,44 @@ public class UserController {
         UUID userId = extractUserId(userDetails);
         UserInfoResponse response = userProfileService.updateNickname(userId, request.getNickname());
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/me/password")
+    @Operation(
+            summary = "비밀번호 변경",
+            description = "현재 비밀번호 확인 후 새 비밀번호로 변경합니다. 소셜 로그인 전용 계정은 사용 불가합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "비밀번호 복잡도 미달",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"code\": \"C002\", \"message\": \"입력값 검증에 실패했습니다\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "현재 비밀번호 불일치",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"code\": \"A001\", \"message\": \"이메일 또는 비밀번호가 올바르지 않습니다\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "소셜 로그인 전용 계정 (비밀번호 없음)",
+                    content = @Content(
+                            examples = @ExampleObject(value = "{\"code\": \"A003\", \"message\": \"소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다\"}")
+                    )
+            )
+    })
+    public ResponseEntity<Map<String, String>> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordWhileLoggedInRequest request
+    ) {
+        UUID userId = extractUserId(userDetails);
+        authService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
     }
 
     @DeleteMapping("/me")

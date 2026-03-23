@@ -35,16 +35,27 @@ public class UserInfoResponse {
     @Schema(description = "성별 (MALE: 남성, FEMALE: 여성)", example = "MALE")
     private Gender gender;
 
+    @Schema(description = "이메일 인증 계정 보유 여부 (false면 SNS 전용 계정)", example = "true")
+    private boolean hasEmailAuth;
+
     /**
-     * User 엔티티로부터 UserInfoResponse 생성
+     * User 엔티티로부터 UserInfoResponse 생성 (hasEmailAuth = false)
      */
     public static UserInfoResponse from(User user) {
+        return from(user, false);
+    }
+
+    /**
+     * User 엔티티와 이메일 인증 여부로 UserInfoResponse 생성
+     */
+    public static UserInfoResponse from(User user, boolean hasEmailAuth) {
         return UserInfoResponse.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
                 .gender(user.getGender())
+                .hasEmailAuth(hasEmailAuth)
                 .build();
     }
 }
