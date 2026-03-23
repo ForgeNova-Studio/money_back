@@ -27,10 +27,7 @@ public class ChangePasswordWhileLoggedInRequest {
 
     @NotBlank(message = "새 비밀번호는 필수입니다")
     @Size(min = 8, max = 100, message = "비밀번호는 8자 이상 100자 이하여야 합니다")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
-            message = "비밀번호는 대문자, 소문자, 숫자, 특수문자(@$!%*?&)를 각각 최소 1개 이상 포함해야 합니다"
-    )
+    @Pattern(regexp = ValidationConstants.PASSWORD_REGEXP, message = ValidationConstants.PASSWORD_MESSAGE)
     @Schema(description = "새 비밀번호 (8자 이상, 대소문자/숫자/특수문자 포함)", example = "NewPassword123!")
     private String newPassword;
 }

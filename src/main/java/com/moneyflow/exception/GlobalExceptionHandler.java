@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -103,6 +104,29 @@ public class GlobalExceptionHandler {
                 errors);
 
         return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+    }
+
+    // @RequestParam, @PathVariable 등 파라미터 레벨 검증 실패 (@Validated + @Min/@Max/@NotBlank 등)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ValidationErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException ex) {
+        log.warn("Constraint violation: {}", ex.getMessage());
+        Map<String, String> errors = new HashMap<>();
+        ex.getConstraintViolations().forEach(cv -> {
+            // propertyPath: "methodName.paramName" → 마지막 세그먼트만 추출
+            String path = cv.getPropertyPath().toString();
+            String field = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+            errors.put(field, cv.getMessage());
+        });
+
+        ErrorCode errorCode = ErrorCode.VALIDATION_ERROR;
+        ValidationErrorResponse response = new ValidationErrorResponse(
+                errorCode.getHttpStatus().value(),
+                errorCode.getCode(),
+                errorCode.getMessage(),
+                LocalDateTime.now(),
+                errors);
+        return new ResponseEntity<>(response, errorCode.getHttpStatus());
     }
 
     // ===== 런타임 예외 (예상치 못한 오류) =====

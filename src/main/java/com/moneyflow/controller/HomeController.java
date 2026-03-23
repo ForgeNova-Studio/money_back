@@ -13,8 +13,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
@@ -22,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Home", description = "홈 화면 API")
+@Validated
 @RestController
 @RequestMapping("/api/home")
 @RequiredArgsConstructor
@@ -66,8 +70,8 @@ public class HomeController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam @NotBlank String keyword,
             @RequestParam UUID accountBookId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         UUID userId = UUID.fromString(userDetails.getUsername());
         SearchResponse response = homeService.searchTransactions(userId, accountBookId, keyword, page, size);
