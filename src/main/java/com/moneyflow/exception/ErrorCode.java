@@ -28,6 +28,12 @@ public enum ErrorCode {
     OAUTH_API_ERROR("A006", "소셜 로그인 서비스 오류가 발생했습니다", HttpStatus.BAD_GATEWAY),
     AUTHENTICATION_ERROR("A007", "인증에 실패했습니다", HttpStatus.UNAUTHORIZED),
     EMAIL_REGISTERED_WITH_OTHER_PROVIDER("A008", "이 이메일은 다른 로그인 방법으로 가입되어 있습니다", HttpStatus.CONFLICT),
+    VERIFICATION_REQUIRED("A009", "인증을 먼저 완료해주세요", HttpStatus.BAD_REQUEST),
+    VERIFICATION_CODE_NOT_FOUND("A010", "인증 코드를 찾을 수 없습니다", HttpStatus.BAD_REQUEST),
+    VERIFICATION_CODE_EXPIRED("A011", "인증 코드가 만료되었습니다. 다시 요청해주세요.", HttpStatus.BAD_REQUEST),
+    VERIFICATION_SESSION_EXPIRED("A012", "인증 시간이 만료되었습니다. 다시 인증해주세요", HttpStatus.BAD_REQUEST),
+    VERIFICATION_CODE_MISMATCH("A013", "인증 코드가 일치하지 않습니다", HttpStatus.BAD_REQUEST),
+    VERIFICATION_ATTEMPTS_EXCEEDED("A014", "인증 시도 횟수를 초과했습니다. 코드를 다시 요청해주세요.", HttpStatus.BAD_REQUEST),
 
     // ===== 사용자 (USER) =====
     USER_NOT_FOUND("U001", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

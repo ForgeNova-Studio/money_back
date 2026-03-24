@@ -48,7 +48,7 @@ public class AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("이미 사용 중인 이메일입니다");
+            throw new BusinessException("이미 사용 중인 이메일입니다", ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         emailVerificationService.consumeVerifiedSignup(request.getEmail());
