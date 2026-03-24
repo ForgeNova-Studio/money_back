@@ -138,11 +138,11 @@ public class HomeService {
         String countSql = """
                 SELECT COUNT(*) FROM (
                   SELECT expense_id FROM expenses
-                  WHERE account_book_id = :bookId::uuid
+                  WHERE account_book_id = CAST(:bookId AS uuid)
                     AND (LOWER(COALESCE(merchant, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(memo, '')) LIKE :kw ESCAPE '\\')
                   UNION ALL
                   SELECT income_id FROM incomes
-                  WHERE account_book_id = :bookId::uuid
+                  WHERE account_book_id = CAST(:bookId AS uuid)
                     AND (LOWER(COALESCE(source, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(description, '')) LIKE :kw ESCAPE '\\')
                 ) t
                 """;
@@ -163,7 +163,7 @@ public class HomeService {
                          memo,
                          date
                   FROM expenses
-                  WHERE account_book_id = :bookId::uuid
+                  WHERE account_book_id = CAST(:bookId AS uuid)
                     AND (LOWER(COALESCE(merchant, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(memo, '')) LIKE :kw ESCAPE '\\')
                   UNION ALL
                   SELECT CAST(income_id AS VARCHAR)      AS id,
@@ -174,7 +174,7 @@ public class HomeService {
                          NULL                            AS memo,
                          date
                   FROM incomes
-                  WHERE account_book_id = :bookId::uuid
+                  WHERE account_book_id = CAST(:bookId AS uuid)
                     AND (LOWER(COALESCE(source, '')) LIKE :kw ESCAPE '\\' OR LOWER(COALESCE(description, '')) LIKE :kw ESCAPE '\\')
                 ) t
                 ORDER BY t.date DESC
