@@ -12,6 +12,7 @@ import com.moneyflow.dto.request.SendCodeRequest;
 import com.moneyflow.dto.request.VerifyCodeRequest;
 import com.moneyflow.dto.response.VerificationResponse;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,10 +41,14 @@ public class EmailVerificationService {
                 .findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
                         email,
                         EmailVerification.VerificationType.SIGNUP)
-                .orElseThrow(() -> new BusinessException("이메일 인증을 먼저 완료해주세요"));
+                .orElseThrow(() -> new BusinessException(
+                        "이메일 인증을 먼저 완료해주세요",
+                        ErrorCode.VERIFICATION_REQUIRED));
 
         if (verification.isExpiredForRegistration()) {
-            throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요");
+            throw new BusinessException(
+                    "인증 시간이 만료되었습니다. 다시 인증해주세요",
+                    ErrorCode.VERIFICATION_SESSION_EXPIRED);
         }
 
         emailVerificationRepository.delete(verification);
@@ -55,7 +60,7 @@ public class EmailVerificationService {
         String email = request.getEmail();
 
         if (userRepository.existsByEmail(email)) {
-            throw new BusinessException("이미 가입된 이메일입니다");
+            throw new BusinessException("이미 가입된 이메일입니다", ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         validateSendRateLimit(email, EmailVerification.VerificationType.SIGNUP);
@@ -84,10 +89,14 @@ public class EmailVerificationService {
                 .findFirstByEmailAndVerificationTypeAndVerifiedFalseOrderByCreatedAtDesc(
                         email,
                         EmailVerification.VerificationType.SIGNUP)
-                .orElseThrow(() -> new BusinessException("인증 코드를 찾을 수 없습니다"));
+                .orElseThrow(() -> new BusinessException(
+                        "인증 코드를 찾을 수 없습니다",
+                        ErrorCode.VERIFICATION_CODE_NOT_FOUND));
 
         if (verification.isExpired()) {
-            throw new BusinessException("인증 코드가 만료되었습니다. 다시 요청해주세요.");
+            throw new BusinessException(
+                    "인증 코드가 만료되었습니다. 다시 요청해주세요.",
+                    ErrorCode.VERIFICATION_CODE_EXPIRED);
         }
 
         validateVerificationCode(verification, code, email);
@@ -138,10 +147,14 @@ public class EmailVerificationService {
                 .findFirstByEmailAndVerificationTypeAndVerifiedFalseOrderByCreatedAtDesc(
                         email,
                         EmailVerification.VerificationType.PASSWORD_RESET)
-                .orElseThrow(() -> new BusinessException("인증 코드를 찾을 수 없습니다"));
+                .orElseThrow(() -> new BusinessException(
+                        "인증 코드를 찾을 수 없습니다",
+                        ErrorCode.VERIFICATION_CODE_NOT_FOUND));
 
         if (verification.isExpired()) {
-            throw new BusinessException("인증 코드가 만료되었습니다. 다시 요청해주세요.");
+            throw new BusinessException(
+                    "인증 코드가 만료되었습니다. 다시 요청해주세요.",
+                    ErrorCode.VERIFICATION_CODE_EXPIRED);
         }
 
         validateVerificationCode(verification, code, email);
@@ -168,10 +181,14 @@ public class EmailVerificationService {
                 .findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
                         email,
                         EmailVerification.VerificationType.PASSWORD_RESET)
-                .orElseThrow(() -> new BusinessException("인증을 먼저 완료해주세요"));
+                .orElseThrow(() -> new BusinessException(
+                        "인증을 먼저 완료해주세요",
+                        ErrorCode.VERIFICATION_REQUIRED));
 
         if (verification.isExpiredForRegistration()) {
-            throw new BusinessException("인증 시간이 만료되었습니다. 다시 인증해주세요.");
+            throw new BusinessException(
+                    "인증 시간이 만료되었습니다. 다시 인증해주세요.",
+                    ErrorCode.VERIFICATION_SESSION_EXPIRED);
         }
 
         emailAuth.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -188,7 +205,9 @@ public class EmailVerificationService {
         if (verification.hasExceededAttempts(MAX_VERIFICATION_ATTEMPTS)) {
             emailVerificationRepository.delete(verification);
             log.warn("인증 시도 횟수 초과로 코드 폐기: email={}, type={}", email, verification.getVerificationType());
-            throw new BusinessException("인증 시도 횟수를 초과했습니다. 코드를 다시 요청해주세요.");
+            throw new BusinessException(
+                    "인증 시도 횟수를 초과했습니다. 코드를 다시 요청해주세요.",
+                    ErrorCode.VERIFICATION_ATTEMPTS_EXCEEDED);
         }
 
         if (verification.getVerificationCode().equals(code)) {
@@ -199,11 +218,13 @@ public class EmailVerificationService {
         if (verification.hasExceededAttempts(MAX_VERIFICATION_ATTEMPTS)) {
             emailVerificationRepository.delete(verification);
             log.warn("인증 시도 횟수 초과로 코드 폐기: email={}, type={}", email, verification.getVerificationType());
-            throw new BusinessException("인증 시도 횟수를 초과했습니다. 코드를 다시 요청해주세요.");
+            throw new BusinessException(
+                    "인증 시도 횟수를 초과했습니다. 코드를 다시 요청해주세요.",
+                    ErrorCode.VERIFICATION_ATTEMPTS_EXCEEDED);
         }
 
         emailVerificationRepository.save(verification);
-        throw new BusinessException("인증 코드가 일치하지 않습니다");
+        throw new BusinessException("인증 코드가 일치하지 않습니다", ErrorCode.VERIFICATION_CODE_MISMATCH);
     }
 
     private void validateSendRateLimit(String email, EmailVerification.VerificationType verificationType) {

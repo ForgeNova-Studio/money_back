@@ -7,6 +7,7 @@ import com.moneyflow.domain.verification.EmailVerification;
 import com.moneyflow.domain.verification.EmailVerificationRepository;
 import com.moneyflow.dto.request.VerifyCodeRequest;
 import com.moneyflow.exception.BusinessException;
+import com.moneyflow.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,6 +107,27 @@ class EmailVerificationServiceTest {
         verify(emailService, never()).sendSignupVerificationEmail(
                 org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    @DisplayName("회원가입 인증 확인: 만료된 인증이면 재인증 코드로 응답한다")
+    void consumeVerifiedSignup_throwsVerificationSessionExpiredWhenExpired() {
+        EmailVerification verification = verification(0);
+        verification.markAsVerified();
+        verification.setVerifiedAt(LocalDateTime.now().minusMinutes(31));
+
+        when(emailVerificationRepository.findFirstByEmailAndVerificationTypeAndVerifiedTrueOrderByVerifiedAtDesc(
+                "user@test.com",
+                EmailVerification.VerificationType.SIGNUP))
+                .thenReturn(Optional.of(verification));
+
+        assertThatThrownBy(() -> emailVerificationService.consumeVerifiedSignup("user@test.com"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getMessage()).contains("인증 시간이 만료되었습니다");
+                    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VERIFICATION_SESSION_EXPIRED);
+                });
+
+        verify(emailVerificationRepository, never()).delete(verification);
     }
 
     private EmailVerification verification(int attemptCount) {
