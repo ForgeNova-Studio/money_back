@@ -3,6 +3,7 @@ package com.moneyflow.domain.expense;
 import com.moneyflow.domain.accountbook.AccountBook;
 import com.moneyflow.domain.accountbook.AccountBookRepository;
 import com.moneyflow.domain.accountbook.FundingSource;
+import com.moneyflow.domain.budget.ExpenseCreatedEvent;
 import com.moneyflow.domain.user.User;
 import com.moneyflow.domain.user.UserRepository;
 import com.moneyflow.dto.request.ExpenseRequest;
@@ -15,6 +16,7 @@ import com.moneyflow.service.CategoryClassifier;
 import com.moneyflow.service.RecurringExpenseMatchingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class ExpenseService {
     private final AccountBookRepository accountBookRepository;
     private final CategoryClassifier categoryClassifier;
     private final RecurringExpenseMatchingService matchingService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 지출 생성
@@ -130,6 +133,10 @@ public class ExpenseService {
         log.info("Created expense: {} linked to account book: {}", savedExpense.getExpenseId(),
                 accountBook != null ? accountBook.getAccountBookId() : "none");
 
+        if (accountBook != null) {
+            applicationEventPublisher.publishEvent(new ExpenseCreatedEvent(accountBook.getAccountBookId(), request.getDate()));
+        }
+
         return toResponse(savedExpense);
     }
 
@@ -198,6 +205,11 @@ public class ExpenseService {
 
         Expense updatedExpense = expenseRepository.save(expense);
         log.info("Updated expense: {}", expenseId);
+
+        if (updatedExpense.getAccountBook() != null) {
+            applicationEventPublisher.publishEvent(
+                    new ExpenseCreatedEvent(updatedExpense.getAccountBook().getAccountBookId(), request.getDate()));
+        }
 
         return toResponse(updatedExpense);
     }

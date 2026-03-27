@@ -11,6 +11,7 @@ import org.springframework.security.core.AuthenticationException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -75,6 +76,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException ex) {
         log.error("Bad credentials: {}", ex.getMessage());
         return createErrorResponse(ErrorCode.INVALID_CREDENTIALS);
+    }
+
+    // ===== 요청 파라미터 누락 =====
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException ex) {
+        log.warn("Missing request parameter: {}", ex.getMessage());
+        return createErrorResponse(ErrorCode.INVALID_INPUT, ex.getMessage());
     }
 
     // ===== 요청 유효성 검증 예외 =====
